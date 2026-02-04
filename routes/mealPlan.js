@@ -112,16 +112,37 @@ router.post('/generate', async (req, res) => {
         console.error('Background save failed:', err.message);
       });
   } catch (error) {
-    console.error('Error generating meal plan:', error);
-    console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
+    console.error('❌ Error generating meal plan:', error);
+    console.error('   Message:', error.message);
+    console.error('   Code:', error.errorCode || 'N/A');
+    console.error('   Stack:', error.stack);
+    
+    // Return user-friendly error message
     res.status(500).json({ 
-      error: 'Failed to generate meal plan',
-      details: error.message,
-      type: error.name
+      error: error.userMessage || 'Failed to generate meal plan',
+      details: error.userDetails || error.message,
+      code: error.errorCode || 'UNKNOWN_ERROR',
+      // Help text based on error code
+      help: getErrorHelp(error.errorCode)
     });
   }
 });
+
+// Helper function to provide actionable help based on error code
+function getErrorHelp(errorCode) {
+  const helpText = {
+    'NO_API_KEY': 'Add GEMINI_API_KEY to your Vercel environment variables: Settings → Environment Variables → Add GEMINI_API_KEY',
+    'NOT_INITIALIZED': 'Check that your GEMINI_API_KEY is valid. Get a new key from https://aistudio.google.com/app/apikey',
+    'RATE_LIMIT': 'Wait 1 minute and try again. Consider upgrading your Google AI plan for higher limits.',
+    'QUOTA_EXCEEDED': 'Your free quota is used up. Either wait for reset (usually daily) or upgrade at https://console.cloud.google.com',
+    'MODEL_NOT_FOUND': 'The AI model may have been updated. Contact support or check for app updates.',
+    'INVALID_RESPONSE': 'The AI returned an unexpected response. Try again - this is usually temporary.',
+    'NETWORK_ERROR': 'Check your internet connection and try again.',
+    'API_ERROR': 'An error occurred with the AI service. Please try again in a moment.'
+  };
+  
+  return helpText[errorCode] || 'Please try again. If the problem persists, contact support.';
+}
 
 // Get meal plan by ID
 router.get('/:id', async (req, res) => {

@@ -4,97 +4,8 @@ const { generateMealPlanWithAI, isInitialized } = require('./aiMealGenerator');
 const mealPlanCache = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-// Meal database with nutritional information (fallback)
-const mealDatabase = {
-  // // Low-fat meals (good for gallstones)
-  // lowFat: {
-  //   breakfast: [
-  //     // { name: "Oatmeal with Berries", ingredients: ["oats", "blueberries", "strawberries", "almond milk"], calories: 300, protein: 8, carbs: 55, fat: 5, fiber: 8 },
-  //     // { name: "Greek Yogurt Parfait", ingredients: ["greek yogurt", "granola", "honey", "banana"], calories: 280, protein: 15, carbs: 45, fat: 4, fiber: 4 },
-  //     // { name: "Scrambled Egg Whites", ingredients: ["egg whites", "spinach", "tomatoes", "whole wheat toast"], calories: 250, protein: 20, carbs: 30, fat: 3, fiber: 5 },
-  //     // { name: "Smoothie Bowl", ingredients: ["banana", "spinach", "protein powder", "almond milk", "chia seeds"], calories: 320, protein: 25, carbs: 40, fat: 6, fiber: 10 }
-  //   ],
-  //   lunch: [
-  //     // { name: "Grilled Chicken Salad", ingredients: ["chicken breast", "mixed greens", "cucumber", "tomatoes", "balsamic vinaigrette"], calories: 350, protein: 35, carbs: 20, fat: 8, fiber: 6 },
-  //     // { name: "Quinoa Bowl", ingredients: ["quinoa", "black beans", "corn", "avocado", "lime"], calories: 420, protein: 18, carbs: 65, fat: 10, fiber: 12 },
-  //     // { name: "Turkey Wrap", ingredients: ["turkey breast", "whole wheat tortilla", "lettuce", "tomatoes", "hummus"], calories: 380, protein: 28, carbs: 45, fat: 9, fiber: 7 },
-  //     // { name: "Lentil Soup", ingredients: ["lentils", "carrots", "celery", "onions", "vegetable broth"], calories: 300, protein: 18, carbs: 50, fat: 2, fiber: 15 }
-  //   ],
-  //   dinner: [
-  //     // { name: "Baked Salmon", ingredients: ["salmon", "brown rice", "steamed broccoli", "lemon"], calories: 450, protein: 35, carbs: 45, fat: 12, fiber: 6 },
-  //     // { name: "Turkey Meatballs", ingredients: ["ground turkey", "whole wheat pasta", "marinara sauce", "zucchini"], calories: 480, protein: 32, carbs: 55, fat: 10, fiber: 8 },
-  //     // { name: "Chicken Stir Fry", ingredients: ["chicken breast", "bell peppers", "broccoli", "brown rice"], calories: 420, protein: 38, carbs: 50, fat: 8, fiber: 7 },
-  //     // { name: "Vegetable Curry", ingredients: ["chickpeas", "sweet potatoes", "coconut milk", "brown rice"], calories: 400, protein: 15, carbs: 60, fat: 9, fiber: 14 }
-  //   ],
-  //   snacks: [
-  //     // { name: "Apple with Almond Butter", ingredients: ["apple", "almond butter"], calories: 200, protein: 5, carbs: 30, fat: 8, fiber: 6 },
-  //     // { name: "Carrot Sticks with Hummus", ingredients: ["carrots", "hummus"], calories: 150, protein: 6, carbs: 20, fat: 5, fiber: 6 },
-  //     // { name: "Greek Yogurt", ingredients: ["greek yogurt", "honey"], calories: 120, protein: 12, carbs: 15, fat: 2, fiber: 0 },
-  //     // { name: "Mixed Nuts", ingredients: ["almonds", "walnuts", "cashews"], calories: 180, protein: 6, carbs: 8, fat: 15, fiber: 3 }
-  //   ]
-  // },
-  // // Diabetic-friendly meals
-  // diabetic: {
-  //   breakfast: [
-  //     { name: "Steel Cut Oats", ingredients: ["steel cut oats", "cinnamon", "walnuts", "unsweetened almond milk"], calories: 280, protein: 10, carbs: 40, fat: 8, fiber: 8 },
-  //     { name: "Veggie Omelet", ingredients: ["eggs", "spinach", "mushrooms", "bell peppers", "cheese"], calories: 300, protein: 22, carbs: 10, fat: 18, fiber: 3 },
-  //     { name: "Chia Pudding", ingredients: ["chia seeds", "unsweetened almond milk", "berries", "vanilla"], calories: 250, protein: 8, carbs: 25, fat: 12, fiber: 15 }
-  //   ],
-  //   lunch: [
-  //     { name: "Grilled Chicken Caesar Salad", ingredients: ["chicken breast", "romaine lettuce", "parmesan", "caesar dressing"], calories: 380, protein: 40, carbs: 12, fat: 18, fiber: 4 },
-  //     { name: "Mediterranean Bowl", ingredients: ["chickpeas", "cucumber", "tomatoes", "feta", "olive oil"], calories: 350, protein: 15, carbs: 35, fat: 16, fiber: 10 },
-  //     { name: "Zucchini Noodles with Pesto", ingredients: ["zucchini", "pesto", "cherry tomatoes", "pine nuts"], calories: 320, protein: 12, carbs: 20, fat: 22, fiber: 6 }
-  //   ],
-  //   dinner: [
-  //     { name: "Baked Cod", ingredients: ["cod", "quinoa", "asparagus", "lemon butter"], calories: 400, protein: 38, carbs: 40, fat: 10, fiber: 5 },
-  //     { name: "Turkey Chili", ingredients: ["ground turkey", "kidney beans", "tomatoes", "peppers"], calories: 420, protein: 35, carbs: 45, fat: 12, fiber: 12 },
-  //     { name: "Stuffed Bell Peppers", ingredients: ["bell peppers", "lean ground beef", "brown rice", "tomatoes"], calories: 380, protein: 28, carbs: 35, fat: 14, fiber: 6 }
-  //   ],
-  //   snacks: [
-  //     { name: "Celery with Peanut Butter", ingredients: ["celery", "natural peanut butter"], calories: 150, protein: 6, carbs: 8, fat: 11, fiber: 3 },
-  //     { name: "Hard Boiled Eggs", ingredients: ["eggs"], calories: 140, protein: 12, carbs: 1, fat: 10, fiber: 0 },
-  //     { name: "Cheese and Crackers", ingredients: ["whole grain crackers", "cheese"], calories: 180, protein: 8, carbs: 15, fat: 10, fiber: 3 }
-  //   ]
-  // },
-  // // High protein meals
-  // highProtein: {
-  //   breakfast: [
-  //     { name: "Protein Pancakes", ingredients: ["protein powder", "eggs", "banana", "oats"], calories: 350, protein: 35, carbs: 40, fat: 8, fiber: 6 },
-  //     { name: "Egg White Scramble", ingredients: ["egg whites", "turkey", "vegetables", "cheese"], calories: 320, protein: 40, carbs: 15, fat: 10, fiber: 4 }
-  //   ],
-  //   lunch: [
-  //     { name: "Chicken Breast with Sweet Potato", ingredients: ["chicken breast", "sweet potato", "green beans"], calories: 450, protein: 45, carbs: 50, fat: 8, fiber: 8 },
-  //     { name: "Tuna Salad", ingredients: ["tuna", "greek yogurt", "celery", "whole grain bread"], calories: 380, protein: 42, carbs: 35, fat: 8, fiber: 6 }
-  //   ],
-  //   dinner: [
-  //     { name: "Lean Beef with Vegetables", ingredients: ["lean beef", "broccoli", "brown rice"], calories: 500, protein: 48, carbs: 45, fat: 12, fiber: 7 },
-  //     { name: "Grilled Chicken Thighs", ingredients: ["chicken thighs", "quinoa", "roasted vegetables"], calories: 480, protein: 42, carbs: 40, fat: 15, fiber: 6 }
-  //   ],
-  //   snacks: [
-  //     { name: "Protein Shake", ingredients: ["protein powder", "almond milk", "banana"], calories: 250, protein: 30, carbs: 25, fat: 4, fiber: 4 },
-  //     { name: "Cottage Cheese with Berries", ingredients: ["cottage cheese", "blueberries", "almonds"], calories: 200, protein: 20, carbs: 15, fat: 6, fiber: 3 }
-  //   ]
-  // },
-  // // General healthy meals
-  // general: {
-  //   breakfast: [
-  //     { name: "Avocado Toast", ingredients: ["whole grain bread", "avocado", "eggs", "tomatoes"], calories: 350, protein: 15, carbs: 35, fat: 18, fiber: 10 },
-  //     { name: "Breakfast Burrito", ingredients: ["whole wheat tortilla", "eggs", "black beans", "salsa", "cheese"], calories: 380, protein: 20, carbs: 45, fat: 14, fiber: 8 }
-  //   ],
-  //   lunch: [
-  //     { name: "Chicken Wrap", ingredients: ["chicken", "whole wheat wrap", "lettuce", "tomatoes", "mayo"], calories: 400, protein: 30, carbs: 40, fat: 14, fiber: 6 },
-  //     { name: "Salmon Salad", ingredients: ["salmon", "mixed greens", "quinoa", "dressing"], calories: 420, protein: 32, carbs: 35, fat: 16, fiber: 6 }
-  //   ],
-  //   dinner: [
-  //     { name: "Pasta Primavera", ingredients: ["whole wheat pasta", "vegetables", "olive oil", "parmesan"], calories: 450, protein: 18, carbs: 60, fat: 14, fiber: 8 },
-  //     { name: "Beef Stir Fry", ingredients: ["lean beef", "vegetables", "brown rice"], calories: 480, protein: 35, carbs: 50, fat: 14, fiber: 6 }
-  //   ],
-  //   snacks: [
-  //     { name: "Trail Mix", ingredients: ["nuts", "dried fruits", "dark chocolate"], calories: 200, protein: 6, carbs: 20, fat: 12, fiber: 4 },
-  //     { name: "Rice Cakes with Avocado", ingredients: ["rice cakes", "avocado", "salt"], calories: 180, protein: 4, carbs: 25, fat: 8, fiber: 6 }
-  //   ]
-  // }
-};
+// Meal database - commented out (AI-only mode)
+const mealDatabase = {};
 
 // Health condition meal preferences
 const healthConditionPreferences = {
@@ -242,42 +153,10 @@ function getRandomMeal(mealArray) {
   return mealArray[Math.floor(Math.random() * mealArray.length)];
 }
 
-function generateWeeklyMealPlanFallback(weight, height, healthConditions, includeGroceryList = true) {
-  // Fallback to hardcoded meals if AI fails
-  const mealCategory = getMealCategory(healthConditions);
-  const meals = mealDatabase[mealCategory];
-  const dailyCalories = calculateDailyCalories(weight, height);
-  
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  const weeklyPlan = {};
-  let totalCalories = 0;
-
-  days.forEach(day => {
-    const breakfast = getRandomMeal(meals.breakfast);
-    const lunch = getRandomMeal(meals.lunch);
-    const dinner = getRandomMeal(meals.dinner);
-    const snacks = [getRandomMeal(meals.snacks)];
-
-    const dayCalories = breakfast.calories + lunch.calories + dinner.calories + snacks.reduce((sum, snack) => sum + snack.calories, 0);
-    totalCalories += dayCalories;
-
-    weeklyPlan[day] = {
-      breakfast,
-      lunch,
-      dinner,
-      snacks
-    };
-  });
-
-  // Generate grocery list only if requested
-  const groceryList = includeGroceryList ? generateGroceryList(weeklyPlan) : [];
-
-  return {
-    weeklyPlan,
-    groceryList,
-    totalCalories: Math.round(totalCalories / 7) // Average daily calories
-  };
-}
+// Fallback function - disabled (AI-only mode)
+// function generateWeeklyMealPlanFallback(weight, height, healthConditions, includeGroceryList = true) {
+//   // Uncomment mealDatabase above and this function to enable fallback mode
+// }
 
 async function generateWeeklyMealPlan(weight, height, healthConditions, includeGroceryList = true) {
   const dailyCalories = calculateDailyCalories(weight, height);
@@ -334,23 +213,27 @@ async function generateWeeklyMealPlan(weight, height, healthConditions, includeG
       console.log('AI meal plan generated successfully');
       return result;
     } catch (error) {
-      console.warn('AI generation failed, using fallback:', error.message);
-      // Fall through to fallback
+      console.error('AI generation failed:', error.message);
+      // Preserve user-friendly error properties if they exist
+      if (error.errorCode) {
+        throw error; // Already a user-friendly error
+      }
+      // Wrap in a generic error
+      const wrappedError = new Error(error.message);
+      wrappedError.userMessage = 'Failed to generate meal plan';
+      wrappedError.userDetails = error.message;
+      wrappedError.errorCode = 'AI_GENERATION_FAILED';
+      throw wrappedError;
     }
   } else {
-    console.log('AI not available, using fallback meals');
+    // AI not available - throw error with user-friendly message
+    console.error('AI not available. GEMINI_API_KEY not configured.');
+    const error = new Error('AI not configured');
+    error.userMessage = 'AI service not configured';
+    error.userDetails = 'The GEMINI_API_KEY environment variable is not set.';
+    error.errorCode = 'NO_API_KEY';
+    throw error;
   }
-
-  // Fallback to hardcoded meals
-  const fallbackResult = generateWeeklyMealPlanFallback(weight, height, healthConditions, includeGroceryList);
-  
-  // Cache fallback result too
-  mealPlanCache.set(cacheKey, {
-    data: fallbackResult,
-    timestamp: Date.now()
-  });
-
-  return fallbackResult;
 }
 
 module.exports = {

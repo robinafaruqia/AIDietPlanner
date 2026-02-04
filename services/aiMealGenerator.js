@@ -1,35 +1,30 @@
-// const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { GoogleGenAI } = require('@google/genai');
 
-
 // Initialize Gemini AI
-// let genAI = null;
-let model = null;
 let ai = null;
+let isInitialized = false;
 
-async function initializeGemini() {
-
-   ai = new GoogleGenAI({});
-
-
-  const apiKey =process.env.GEMINI_API_KEY;
+function initializeGemini() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  
   if (!apiKey) {
-    console.warn('GOOGLE_AI_API_KEY not found. AI meal generation will be disabled.');
+    console.warn('⚠️ GEMINI_API_KEY not found. AI meal generation will be disabled.');
     return false;
   }
 
-    // genAI = new GoogleGenerativeAI(apiKey);
-  
-    // Use gemini-1.5-flash (valid model name, without -latest suffix)
-    // Alternative: gemini-pro or gemini-2.5-pro
-    // model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
+  try {
+    // Pass API key to GoogleGenAI
+    ai = new GoogleGenAI({ apiKey });
+    console.log('✅ Gemini AI initialized successfully');
     return true;
-  
+  } catch (error) {
+    console.error('❌ Failed to initialize Gemini:', error.message);
+    return false;
+  }
 }
 
-// Initialize on module load
-const isInitialized =  initializeGemini();
+// Initialize on module load (synchronous now)
+isInitialized = initializeGemini();
 
 function getHealthConditionGuidelines(condition) {
   const guidelines = {
@@ -116,9 +111,98 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just J
 }`;
 }
 
+// Helper to create user-friendly error messages
+function createUserFriendlyError(errorType, details = '') {
+  const errors = {
+    'NO_API_KEY': {
+      message: 'AI service not configured',
+      details: 'The GEMINI_API_KEY environment variable is not set. Please add it to your Vercel environment variables.',
+      code: 'NO_API_KEY'
+    },
+    'NOT_INITIALIZED': {
+      message: 'AI service failed to initialize',
+      details: 'The Gemini AI client could not be initialized. Check your API key is valid.',
+      code: 'NOT_INITIALIZED'
+    },
+    'API_ERROR': {
+      message: 'AI service request failed',
+      details: details || 'The request to Google Gemini API failed.',
+      code: 'API_ERROR'
+    },
+    'RATE_LIMIT': {
+      message: 'AI service rate limit exceeded',
+      details: 'Too many requests. Please wait a moment and try again.',
+      code: 'RATE_LIMIT'
+    },
+    'QUOTA_EXCEEDED': {
+      message: 'AI service quota exceeded',
+      details: 'The API quota has been exceeded. Check your Google Cloud billing or wait for quota reset.',
+      code: 'QUOTA_EXCEEDED'
+    },
+    'INVALID_RESPONSE': {
+      message: 'AI returned invalid response',
+      details: details || 'The AI response could not be parsed. Please try again.',
+      code: 'INVALID_RESPONSE'
+    },
+    'MODEL_NOT_FOUND': {
+      message: 'AI model not available',
+      details: 'The requested model is not available. This may be a temporary issue.',
+      code: 'MODEL_NOT_FOUND'
+    },
+    'NETWORK_ERROR': {
+      message: 'Network error',
+      details: 'Could not connect to AI service. Check your internet connection.',
+      code: 'NETWORK_ERROR'
+    }
+  };
+
+  const errorInfo = errors[errorType] || {
+    message: 'Unknown error',
+    details: details || 'An unexpected error occurred.',
+    code: 'UNKNOWN'
+  };
+
+  const error = new Error(errorInfo.message);
+  error.userMessage = errorInfo.message;
+  error.userDetails = errorInfo.details;
+  error.errorCode = errorInfo.code;
+  return error;
+}
+
+// Classify error type from error message
+function classifyError(error) {
+  const msg = error.message?.toLowerCase() || '';
+  
+  if (msg.includes('api key') || msg.includes('apikey') || msg.includes('unauthorized') || msg.includes('401')) {
+    return 'NO_API_KEY';
+  }
+  if (msg.includes('quota') || msg.includes('billing')) {
+    return 'QUOTA_EXCEEDED';
+  }
+  if (msg.includes('rate limit') || msg.includes('429') || msg.includes('too many')) {
+    return 'RATE_LIMIT';
+  }
+  if (msg.includes('not found') || msg.includes('404') || msg.includes('model')) {
+    return 'MODEL_NOT_FOUND';
+  }
+  if (msg.includes('network') || msg.includes('econnrefused') || msg.includes('timeout') || msg.includes('fetch')) {
+    return 'NETWORK_ERROR';
+  }
+  if (msg.includes('json') || msg.includes('parse') || msg.includes('syntax')) {
+    return 'INVALID_RESPONSE';
+  }
+  return 'API_ERROR';
+}
+
 async function generateMealPlanWithAI(weight, height, healthConditions, dailyCalories) {
-  if (!isInitialized) {
-    throw new Error('Gemini AI not initialized. Check GOOGLE_AI_API_KEY.');
+  // Check API key first
+  if (!process.env.GEMINI_API_KEY) {
+    throw createUserFriendlyError('NO_API_KEY');
+  }
+
+  // Check initialization
+  if (!isInitialized || !ai) {
+    throw createUserFriendlyError('NOT_INITIALIZED');
   }
 
   const maxRetries = 2;
@@ -127,14 +211,26 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const prompt = createMealPlanPrompt(weight, height, healthConditions, dailyCalories);
+      
+      console.log(`🤖 Calling Gemini API (attempt ${attempt}/${maxRetries})...`);
+      console.log(`   Model: gemini-2.0-flash`);
+      console.log(`   User: ${weight}kg, ${height}cm, condition: ${healthConditions?.[0] || 'none'}`);
+      
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash",
         contents: prompt,
       });
-      // console.log(response.text);
-      // const result = await model.generateContent(prompt);
-      // const response = await result.response;
-      const text = response.text;
+      
+      console.log('✅ Gemini API responded');
+      
+      // Get text from response
+      const text = typeof response.text === 'function' ? response.text() : response.text;
+      
+      if (!text) {
+        throw createUserFriendlyError('INVALID_RESPONSE', 'AI returned empty response');
+      }
+
+      console.log(`📝 Response length: ${text.length} characters`);
 
       // Clean the response - remove markdown code blocks if present
       let jsonText = text.trim();
@@ -145,64 +241,85 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
       }
 
       // Parse JSON
-      const mealPlanData = JSON.parse(jsonText);
+      let mealPlanData;
+      try {
+        mealPlanData = JSON.parse(jsonText);
+      } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError.message);
+        console.error('   Raw response (first 500 chars):', jsonText.substring(0, 500));
+        throw createUserFriendlyError('INVALID_RESPONSE', 'AI response was not valid JSON. Please try again.');
+      }
 
       // Validate structure
       if (!mealPlanData.weeklyPlan) {
-        throw new Error('Invalid response structure: missing weeklyPlan');
+        throw createUserFriendlyError('INVALID_RESPONSE', 'AI response missing weeklyPlan structure');
       }
 
       const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-      const isValid = days.every(day => 
-        mealPlanData.weeklyPlan[day]?.breakfast && 
-        mealPlanData.weeklyPlan[day]?.lunch && 
-        mealPlanData.weeklyPlan[day]?.dinner && 
-        mealPlanData.weeklyPlan[day]?.snacks
-      );
-
-      if (!isValid) {
-        throw new Error('Invalid meal plan structure: one or more days are missing required meals');
+      const missingDays = days.filter(day => !mealPlanData.weeklyPlan[day]);
+      
+      if (missingDays.length > 0) {
+        throw createUserFriendlyError('INVALID_RESPONSE', `AI response missing days: ${missingDays.join(', ')}`);
       }
-      // for (const day of days) {
-      //   if (!mealPlanData.weeklyPlan[day]) {
-      //     throw new Error(`Missing day: ${day}`);
-      //   }
-      //   const dayPlan = mealPlanData.weeklyPlan[day];
-      //   if (!dayPlan.breakfast || !dayPlan.lunch || !dayPlan.dinner || !dayPlan.snacks) {
-      //     throw new Error(`Invalid structure for ${day}: missing required meals`);
-      //   }
-      // }
 
+      const invalidDays = days.filter(day => {
+        const d = mealPlanData.weeklyPlan[day];
+        return !d?.breakfast || !d?.lunch || !d?.dinner || !d?.snacks;
+      });
+
+      if (invalidDays.length > 0) {
+        throw createUserFriendlyError('INVALID_RESPONSE', `AI response has incomplete meals for: ${invalidDays.join(', ')}`);
+      }
+
+      console.log('✅ Meal plan validated successfully');
       return mealPlanData.weeklyPlan;
+
     } catch (error) {
       lastError = error;
-      console.error(`Error generating meal plan with AI (attempt ${attempt}/${maxRetries}):`, error.message);
       
-      // If it's a rate limit or quota error, don't retry
-      if (error.message.includes('quota') || error.message.includes('rate limit') || error.message.includes('429')) {
-        console.error('Rate limit/quota exceeded. Will fallback to hardcoded meals.');
-        throw error;
+      // If it's already a user-friendly error, log and maybe rethrow
+      if (error.errorCode) {
+        console.error(`❌ Error (${error.errorCode}): ${error.userMessage}`);
+        console.error(`   Details: ${error.userDetails}`);
+      } else {
+        console.error(`❌ Error (attempt ${attempt}/${maxRetries}):`, error.message);
       }
       
-      // If it's the last attempt, throw the error
+      // Classify the error
+      const errorType = error.errorCode || classifyError(error);
+      
+      // Don't retry for certain errors
+      if (['NO_API_KEY', 'QUOTA_EXCEEDED', 'NOT_INITIALIZED'].includes(errorType)) {
+        throw error.errorCode ? error : createUserFriendlyError(errorType, error.message);
+      }
+      
+      // Rate limit - don't retry immediately
+      if (errorType === 'RATE_LIMIT') {
+        throw createUserFriendlyError('RATE_LIMIT');
+      }
+      
+      // Last attempt - throw with user-friendly message
       if (attempt === maxRetries) {
-        if (error.message.includes('JSON')) {
-          console.error('Failed to parse AI response as JSON after retries');
-        }
-        throw error;
+        throw error.errorCode ? error : createUserFriendlyError(errorType, error.message);
       }
       
-      // Wait before retrying (exponential backoff)
+      // Wait before retrying
+      console.log(`⏳ Waiting ${attempt}s before retry...`);
       await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
   }
   
-  // Should never reach here, but just in case
-  throw lastError || new Error('Failed to generate meal plan after retries');
+  throw lastError || createUserFriendlyError('API_ERROR', 'Failed after multiple retries');
 }
 
 module.exports = {
   generateMealPlanWithAI,
-  isInitialized: () => isInitialized
+  isInitialized: () => isInitialized,
+  // For debugging
+  getStatus: () => ({
+    initialized: isInitialized,
+    hasApiKey: !!process.env.GEMINI_API_KEY,
+    aiReady: !!ai
+  })
 };
 
