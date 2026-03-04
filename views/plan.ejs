@@ -6,6 +6,8 @@
     <title>Create Meal Plan - AI Diet Planner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -53,6 +55,32 @@
             width: 3rem;
             height: 3rem;
         }
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 38px;
+        }
+        .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+            background-color: #87CEEB;
+            border: none;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
+            color: white;
+            margin-right: 4px;
+        }
+        .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #e0e0e0;
+            background: transparent;
+        }
+        .select2-container--bootstrap-5 .select2-dropdown .select2-results__option--selected {
+            background-color: #87CEEB;
+            color: white;
+        }
+        .select2-container--bootstrap-5 .select2-dropdown .select2-results__option--highlighted {
+            background-color: #5cb8d6;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -71,6 +99,9 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link active" href="/plan">Create Plan</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tracking">Tracking</a>
                     </li>
                 </ul>
             </div>
@@ -99,26 +130,29 @@
                                     <small class="form-text text-muted">e.g., 170 for 170 cm (5'7")</small>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="healthConditions" class="form-label">Health Condition</label>
-                                    <select class="form-select" id="healthConditions" name="healthConditions">
-                                        <option value="">None</option>
-                                        <option value="gallstones">Gallstones</option>
-                                        <option value="diabetes">Diabetes</option>
-                                        <option value="high blood pressure">High Blood Pressure</option>
-                                        <option value="heart disease">Heart Disease</option>
-                                        <option value="obesity">Obesity</option>
+                                    <label for="healthConditions" class="form-label">Health Condition(s)</label>
+                                    <select class="form-select" id="healthConditions" name="healthConditions" multiple>
+                                        <% if (typeof healthConditions !== 'undefined' && healthConditions.length) { %>
+                                            <% healthConditions.forEach(function(condition) { %>
+                                                <option value="<%= condition.id %>"><%= condition.name %></option>
+                                            <% }); %>
+                                        <% } %>
                                     </select>
-                                    <small class="form-text text-muted">Select your health condition for personalized meal plans</small>
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-12 mb-3">
+                                <div class="col-md-8 mb-3">
+                                    <label for="customCondition" class="form-label">Other Condition (optional)</label>
+                                    <input type="text" class="form-control" id="customCondition" name="customCondition" 
+                                           placeholder="e.g., Lactose intolerance, Nut allergy, Vegetarian">
+                                    <small class="form-text text-muted">Add any condition not listed above</small>
+                                </div>
+                                <div class="col-md-4 mb-3 d-flex align-items-end">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="includeGroceryList" checked>
                                         <label class="form-check-label" for="includeGroceryList">
                                             <i class="bi bi-cart"></i> Include Grocery List
                                         </label>
-                                        <small class="form-text text-muted d-block">Generate a shopping list based on the meal plan</small>
                                     </div>
                                 </div>
                             </div>
@@ -168,15 +202,32 @@
 
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $(document).ready(function() {
+            // Initialize Select2 for health conditions
+            $('#healthConditions').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Select health conditions...',
+                allowClear: true,
+                width: '100%',
+                closeOnSelect: false
+            });
+
             $('#mealPlanForm').on('submit', function(e) {
                 e.preventDefault();
                 
                 const weight = $('#weight').val();
                 const height = $('#height').val();
-                const healthConditions = $('#healthConditions').val();
+                const selectedConditions = $('#healthConditions').val() || [];
+                const customCondition = $('#customCondition').val()?.trim();
                 const includeGroceryList = $('#includeGroceryList').is(':checked');
+                
+                // Combine selected conditions with custom condition
+                let allConditions = [...selectedConditions];
+                if (customCondition) {
+                    allConditions.push(customCondition);
+                }
                 
                 if (!weight || weight <= 0) {
                     alert('Please enter a valid weight');
@@ -190,6 +241,7 @@
 
                 $('.loading').show();
                 $('#mealPlanResult').hide();
+                $('#errorAlert').remove();
 
                 $.ajax({
                     url: '/api/meal-plan/generate',
@@ -198,7 +250,7 @@
                     data: JSON.stringify({
                         weight: parseFloat(weight),
                         height: parseFloat(height),
-                        healthConditions: healthConditions ? [healthConditions] : [],
+                        healthConditions: allConditions,
                         includeGroceryList: includeGroceryList
                     }),
                     success: function(response) {
@@ -225,13 +277,30 @@
                 });
             });
 
+            function safeText(value) {
+                if (value === null || value === undefined) return '';
+                return escapeHtml(String(value));
+            }
+
+            function safeNumber(value) {
+                const n = Number(value);
+                return Number.isFinite(n) ? n : 0;
+            }
+
+            function safeJoin(arr) {
+                if (!Array.isArray(arr)) return '';
+                return arr.map(v => safeText(v)).filter(Boolean).join(', ');
+            }
+
             function displayMealPlan(mealPlan) {
-                $('#totalCalories').text(mealPlan.totalCalories);
-                $('#weightDisplay').text(mealPlan.weight || $('#weight').val());
-                $('#heightDisplay').text(mealPlan.height || $('#height').val());
+                $('#totalCalories').text(safeNumber(mealPlan.totalCalories));
+                $('#weightDisplay').text(safeNumber(mealPlan.weight || $('#weight').val()));
+                $('#heightDisplay').text(safeNumber(mealPlan.height || $('#height').val()));
+
+                const hc = Array.isArray(mealPlan.healthConditions) ? mealPlan.healthConditions : [];
                 $('#healthConditionsDisplay').text(
-                    mealPlan.healthConditions.length > 0 
-                        ? mealPlan.healthConditions.join(', ') 
+                    hc.length > 0
+                        ? hc.map(v => String(v)).join(', ')
                         : 'None'
                 );
 
@@ -242,6 +311,18 @@
                 days.forEach((day, index) => {
                     const dayPlan = mealPlan.weeklyPlan[day];
                     if (dayPlan) {
+                        const breakfast = dayPlan.breakfast || {};
+                        const lunch = dayPlan.lunch || {};
+                        const dinner = dayPlan.dinner || {};
+                        const snacks = Array.isArray(dayPlan.snacks) ? dayPlan.snacks : [];
+
+                        // Store meals for logging
+                        window.mealData = window.mealData || {};
+                        window.mealData[`${day}_breakfast`] = breakfast;
+                        window.mealData[`${day}_lunch`] = lunch;
+                        window.mealData[`${day}_dinner`] = dinner;
+                        snacks.forEach((s, i) => window.mealData[`${day}_snack_${i}`] = s);
+
                         weeklyPlanHtml += `
                             <div class="card mb-3">
                                 <div class="day-header">${dayNames[index]}</div>
@@ -249,36 +330,51 @@
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="meal-card">
-                                                <h6><i class="bi bi-sunrise"></i> Breakfast</h6>
-                                                <strong>${dayPlan.breakfast.name}</strong>
-                                                <p class="mb-1"><small>${dayPlan.breakfast.ingredients.join(', ')}</small></p>
-                                                <small class="text-muted">${dayPlan.breakfast.calories} kcal | P: ${dayPlan.breakfast.protein}g | C: ${dayPlan.breakfast.carbs}g | F: ${dayPlan.breakfast.fat}g</small>
+                                                <h6><i class="bi bi-sunrise"></i> Breakfast
+                                                    <button class="btn btn-sm btn-outline-success float-end" onclick="logMeal('${day}_breakfast', 'breakfast')" title="Log this meal">
+                                                        <i class="bi bi-plus-circle"></i>
+                                                    </button>
+                                                </h6>
+                                                <strong>${safeText(breakfast.name)}</strong>
+                                                <p class="mb-1"><small>${safeJoin(breakfast.ingredients)}</small></p>
+                                                <small class="text-muted">${safeNumber(breakfast.calories)} kcal | P: ${safeNumber(breakfast.protein)}g | C: ${safeNumber(breakfast.carbs)}g | F: ${safeNumber(breakfast.fat)}g</small>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="meal-card">
-                                                <h6><i class="bi bi-sun"></i> Lunch</h6>
-                                                <strong>${dayPlan.lunch.name}</strong>
-                                                <p class="mb-1"><small>${dayPlan.lunch.ingredients.join(', ')}</small></p>
-                                                <small class="text-muted">${dayPlan.lunch.calories} kcal | P: ${dayPlan.lunch.protein}g | C: ${dayPlan.lunch.carbs}g | F: ${dayPlan.lunch.fat}g</small>
+                                                <h6><i class="bi bi-sun"></i> Lunch
+                                                    <button class="btn btn-sm btn-outline-success float-end" onclick="logMeal('${day}_lunch', 'lunch')" title="Log this meal">
+                                                        <i class="bi bi-plus-circle"></i>
+                                                    </button>
+                                                </h6>
+                                                <strong>${safeText(lunch.name)}</strong>
+                                                <p class="mb-1"><small>${safeJoin(lunch.ingredients)}</small></p>
+                                                <small class="text-muted">${safeNumber(lunch.calories)} kcal | P: ${safeNumber(lunch.protein)}g | C: ${safeNumber(lunch.carbs)}g | F: ${safeNumber(lunch.fat)}g</small>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="meal-card">
-                                                <h6><i class="bi bi-moon"></i> Dinner</h6>
-                                                <strong>${dayPlan.dinner.name}</strong>
-                                                <p class="mb-1"><small>${dayPlan.dinner.ingredients.join(', ')}</small></p>
-                                                <small class="text-muted">${dayPlan.dinner.calories} kcal | P: ${dayPlan.dinner.protein}g | C: ${dayPlan.dinner.carbs}g | F: ${dayPlan.dinner.fat}g</small>
+                                                <h6><i class="bi bi-moon"></i> Dinner
+                                                    <button class="btn btn-sm btn-outline-success float-end" onclick="logMeal('${day}_dinner', 'dinner')" title="Log this meal">
+                                                        <i class="bi bi-plus-circle"></i>
+                                                    </button>
+                                                </h6>
+                                                <strong>${safeText(dinner.name)}</strong>
+                                                <p class="mb-1"><small>${safeJoin(dinner.ingredients)}</small></p>
+                                                <small class="text-muted">${safeNumber(dinner.calories)} kcal | P: ${safeNumber(dinner.protein)}g | C: ${safeNumber(dinner.carbs)}g | F: ${safeNumber(dinner.fat)}g</small>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="meal-card">
                                                 <h6><i class="bi bi-apple"></i> Snacks</h6>
-                                                ${dayPlan.snacks.map(snack => `
-                                                    <div>
-                                                        <strong>${snack.name}</strong>
-                                                        <p class="mb-1"><small>${snack.ingredients.join(', ')}</small></p>
-                                                        <small class="text-muted">${snack.calories} kcal</small>
+                                                ${snacks.map((snack, snackIdx) => `
+                                                    <div class="mb-2">
+                                                        <strong>${safeText(snack?.name)}</strong>
+                                                        <button class="btn btn-sm btn-outline-success float-end" onclick="logMeal('${day}_snack_${snackIdx}', 'snack')" title="Log this snack">
+                                                            <i class="bi bi-plus-circle"></i>
+                                                        </button>
+                                                        <p class="mb-1"><small>${safeJoin(snack?.ingredients)}</small></p>
+                                                        <small class="text-muted">${safeNumber(snack?.calories)} kcal</small>
                                                     </div>
                                                 `).join('')}
                                             </div>
@@ -304,12 +400,12 @@
                     let groceryHtml = '';
                     Object.keys(groceryByCategory).forEach(category => {
                         groceryHtml += `
-                            <h5 class="mt-3 mb-3">${category}</h5>
+                            <h5 class="mt-3 mb-3">${safeText(category)}</h5>
                             <ul class="list-group">
                                 ${groceryByCategory[category].map(item => `
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        ${item.item}
-                                        <span class="badge bg-primary rounded-pill">${item.quantity}</span>
+                                        ${safeText(item.item)}
+                                        <span class="badge bg-primary rounded-pill">${safeText(item.quantity)}</span>
                                     </li>
                                 `).join('')}
                             </ul>
@@ -368,6 +464,51 @@
                 return div.innerHTML;
             }
         });
+
+        // Log meal to nutrition tracker
+        async function logMeal(mealKey, mealType) {
+            const meal = window.mealData?.[mealKey];
+            if (!meal || !meal.name) {
+                alert('Meal data not found');
+                return;
+            }
+
+            try {
+                const response = await $.ajax({
+                    url: '/api/nutrition/log/from-plan',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        mealType: mealType,
+                        meal: meal
+                    })
+                });
+
+                if (response.success) {
+                    // Show success toast
+                    const toast = $(`
+                        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+                            <div class="toast show" role="alert">
+                                <div class="toast-header bg-success text-white">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    <strong class="me-auto">Meal Logged!</strong>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                                </div>
+                                <div class="toast-body">
+                                    ${escapeHtml(meal.name)} has been added to your nutrition log.
+                                    <a href="/tracking" class="btn btn-sm btn-outline-primary mt-2">View Tracking</a>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                    $('body').append(toast);
+                    setTimeout(() => toast.remove(), 4000);
+                }
+            } catch (error) {
+                const msg = error.responseJSON?.error || 'Failed to log meal';
+                alert(msg);
+            }
+        }
     </script>
 </body>
 </html>

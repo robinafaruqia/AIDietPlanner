@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nutrition Tracking - AI Diet Planner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --calories-color: #ef4444;
+            --protein-color: #22c55e;
+            --carbs-color: #f59e0b;
+            --fat-color: #3b82f6;
+            --fiber-color: #8b5cf6;
+        }
+        body {
+            background: #f0f2f5;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: var(--primary-gradient) !important;
+        }
+        .card {
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            border-radius: 16px 16px 0 0 !important;
+            font-weight: 600;
+        }
+        
+        /* Circular Progress */
+        .circular-progress {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto;
+        }
+        .circular-progress svg {
+            transform: rotate(-90deg);
+        }
+        .circular-progress .progress-ring {
+            fill: none;
+            stroke-width: 12;
+            stroke-linecap: round;
+        }
+        .circular-progress .progress-bg {
+            stroke: #e5e7eb;
+        }
+        .circular-progress .progress-value {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        .circular-progress .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .circular-progress .progress-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            display: block;
+        }
+        .circular-progress .progress-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        
+        /* Macro Bars */
+        .macro-bar {
+            background: #f3f4f6;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+        }
+        .macro-bar .progress {
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+        }
+        .macro-bar .progress-bar {
+            border-radius: 4px;
+        }
+        .macro-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        
+        /* Date Navigation */
+        .date-nav {
+            background: var(--primary-gradient);
+            padding: 15px 0;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .date-nav button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .date-nav button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        /* Food Diary */
+        .meal-section {
+            border-left: 4px solid;
+            padding-left: 15px;
+            margin-bottom: 20px;
+        }
+        .meal-section.breakfast { border-color: #f59e0b; }
+        .meal-section.lunch { border-color: #22c55e; }
+        .meal-section.dinner { border-color: #3b82f6; }
+        .meal-section.snack { border-color: #8b5cf6; }
+        
+        .food-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .food-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* Stats Cards */
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            background: white;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+        
+        /* Water Tracker */
+        .water-glass {
+            width: 32px;
+            height: 40px;
+            border: 2px solid #60a5fa;
+            border-radius: 0 0 8px 8px;
+            margin: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .water-glass.filled {
+            background: linear-gradient(to top, #60a5fa 100%, transparent 100%);
+        }
+        .water-glass:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Streak Badge */
+        .streak-badge {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        
+        /* Mood Selector */
+        .mood-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #e5e7eb;
+            background: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mood-btn:hover, .mood-btn.active {
+            transform: scale(1.1);
+            border-color: #667eea;
+        }
+        .mood-btn.active {
+            background: #f0f0ff;
+        }
+        
+        /* Energy Balance */
+        .energy-balance {
+            background: linear-gradient(135deg, #1e3a5f, #2d5a87);
+            color: white;
+            border-radius: 16px;
+            padding: 24px;
+        }
+        .energy-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .energy-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .btn-primary {
+            background: var(--primary-gradient);
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-heart-pulse"></i> AI Diet Planner
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/plan">Create Plan</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/tracking">Tracking</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Date Navigation -->
+    <div class="date-nav">
+        <div class="container">
+            <div class="d-flex justify-content-center align-items-center gap-3">
+                <button id="prevDay"><i class="bi bi-chevron-left"></i></button>
+                <div class="text-center" style="min-width: 180px;">
+                    <h5 class="mb-0" id="currentDate">Today</h5>
+                    <small id="dateSubtext"></small>
+                </div>
+                <button id="nextDay"><i class="bi bi-chevron-right"></i></button>
+                <button class="btn btn-sm btn-light ms-2" id="todayBtn">Today</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container pb-5">
+        <div class="row">
+            <!-- Left Column - Main Content -->
+            <div class="col-lg-8">
+                <!-- Energy Balance Card -->
+                <div class="energy-balance mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-4 text-center border-end">
+                            <div class="energy-value" id="caloriesIn">0</div>
+                            <div class="energy-label"><i class="bi bi-arrow-down-circle"></i> Eaten</div>
+                        </div>
+                        <div class="col-md-4 text-center border-end">
+                            <div class="energy-value" id="caloriesBurned">0</div>
+                            <div class="energy-label"><i class="bi bi-fire"></i> Burned</div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="energy-value" id="caloriesNet">0</div>
+                            <div class="energy-label"><i class="bi bi-calculator"></i> Net</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Macros Overview -->
+                <div class="card">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-pie-chart-fill text-primary"></i> Nutrition Summary</span>
+                        <span class="streak-badge" id="streakBadge" style="display:none;">
+                            <i class="bi bi-fire"></i> <span id="streakCount">0</span> day streak
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center mb-4">
+                                <div class="circular-progress" id="caloriesRing">
+                                    <svg width="140" height="140">
+                                        <circle class="progress-ring progress-bg" cx="70" cy="70" r="58"></circle>
+                                        <circle class="progress-ring progress-value" cx="70" cy="70" r="58" 
+                                                stroke="var(--calories-color)" stroke-dasharray="364.4" stroke-dashoffset="364.4"></circle>
+                                    </svg>
+                                    <div class="progress-text">
+                                        <span class="progress-number" id="caloriesValue">0</span>
+                                        <span class="progress-label">of <span id="caloriesGoal">2000</span></span>
+                                    </div>
+                                </div>
+                                <div class="mt-2 fw-bold">Calories</div>
+                            </div>
+                            <div class="col-md-8">
+                                <canvas id="macroChart" height="140"></canvas>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Macro Bars -->
+                        <div class="macro-bar">
+                            <div class="macro-label">
+                                <span><i class="bi bi-circle-fill text-success"></i> Protein</span>
+                                <span><span id="proteinValue">0</span>g / <span id="proteinGoal">50</span>g</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" id="proteinBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="macro-bar">
+                            <div class="macro-label">
+                                <span><i class="bi bi-circle-fill text-warning"></i> Carbs</span>
+                                <span><span id="carbsValue">0</span>g / <span id="carbsGoal">250</span>g</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-warning" id="carbsBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="macro-bar">
+                            <div class="macro-label">
+                                <span><i class="bi bi-circle-fill text-primary"></i> Fat</span>
+                                <span><span id="fatValue">0</span>g / <span id="fatGoal">65</span>g</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" id="fatBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="macro-bar">
+                            <div class="macro-label">
+                                <span><i class="bi bi-circle-fill text-secondary"></i> Fiber</span>
+                                <span><span id="fiberValue">0</span>g / <span id="fiberGoal">25</span>g</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-secondary" id="fiberBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Food Diary -->
+                <div class="card">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-journal-text text-success"></i> Food Diary</span>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMealModal">
+                            <i class="bi bi-plus-lg"></i> Add Food
+                        </button>
+                    </div>
+                    <div class="card-body" id="foodDiary">
+                        <!-- Meals will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Exercise Log -->
+                <div class="card">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-lightning-charge text-warning"></i> Exercise</span>
+                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#addExerciseModal">
+                            <i class="bi bi-plus-lg"></i> Add Exercise
+                        </button>
+                    </div>
+                    <div class="card-body" id="exerciseList">
+                        <p class="text-muted text-center mb-0">No exercises logged</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Sidebar -->
+            <div class="col-lg-4">
+                <!-- Water Intake -->
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <i class="bi bi-droplet-fill text-info"></i> Water Intake
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="d-flex flex-wrap justify-content-center mb-2" id="waterGlasses">
+                            <!-- Water glasses will be rendered here -->
+                        </div>
+                        <div class="mt-2">
+                            <span id="waterCount" class="fs-4 fw-bold text-info">0</span>
+                            <span class="text-muted">/ 8 glasses</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mood Tracker -->
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <i class="bi bi-emoji-smile text-warning"></i> How do you feel?
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-around" id="moodSelector">
+                            <button class="mood-btn" data-mood="great" title="Great">😄</button>
+                            <button class="mood-btn" data-mood="good" title="Good">🙂</button>
+                            <button class="mood-btn" data-mood="okay" title="Okay">😐</button>
+                            <button class="mood-btn" data-mood="tired" title="Tired">😴</button>
+                            <button class="mood-btn" data-mood="stressed" title="Stressed">😓</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weight Tracker -->
+                <div class="card">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-speedometer2 text-danger"></i> Biometrics</span>
+                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#biometricsModal">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="fs-4 fw-bold" id="currentWeight">--</div>
+                                <small class="text-muted">Weight (kg)</small>
+                            </div>
+                            <div class="col-6">
+                                <div class="fs-4 fw-bold" id="currentBodyFat">--</div>
+                                <small class="text-muted">Body Fat %</small>
+                            </div>
+                        </div>
+                        <canvas id="weightChart" height="120" class="mt-3"></canvas>
+                    </div>
+                </div>
+
+                <!-- Weekly Trend -->
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <i class="bi bi-graph-up text-success"></i> 7-Day Calories
+                    </div>
+                    <div class="card-body">
+                        <canvas id="weeklyChart" height="150"></canvas>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <i class="bi bi-gear text-secondary"></i> Settings
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-outline-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#goalsModal">
+                            <i class="bi bi-bullseye"></i> Set Daily Goals
+                        </button>
+                        <button class="btn btn-outline-info w-100 mb-2" data-bs-toggle="modal" data-bs-target="#goalWizardModal">
+                            <i class="bi bi-calculator"></i> Goal Calculator
+                        </button>
+                        <a href="/plan" class="btn btn-outline-success w-100">
+                            <i class="bi bi-magic"></i> Generate Meal Plan
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Meal Modal -->
+    <div class="modal fade" id="addMealModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Log Food</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addMealForm">
+                        <div class="mb-3">
+                            <label class="form-label">Meal Type</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="mealType" id="mealBreakfast" value="breakfast" checked>
+                                <label class="btn btn-outline-warning" for="mealBreakfast">Breakfast</label>
+                                <input type="radio" class="btn-check" name="mealType" id="mealLunch" value="lunch">
+                                <label class="btn btn-outline-success" for="mealLunch">Lunch</label>
+                                <input type="radio" class="btn-check" name="mealType" id="mealDinner" value="dinner">
+                                <label class="btn btn-outline-primary" for="mealDinner">Dinner</label>
+                                <input type="radio" class="btn-check" name="mealType" id="mealSnack" value="snack">
+                                <label class="btn btn-outline-secondary" for="mealSnack">Snack</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Food Name</label>
+                            <input type="text" class="form-control" id="mealName" placeholder="e.g., Grilled Chicken Salad" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Serving Size</label>
+                            <input type="text" class="form-control" id="servingSize" placeholder="e.g., 1 cup, 100g" value="1 serving">
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Calories</label>
+                                <input type="number" class="form-control" id="mealCalories" placeholder="0" min="0">
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Protein (g)</label>
+                                <input type="number" class="form-control" id="mealProtein" placeholder="0" min="0">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4 mb-3">
+                                <label class="form-label">Carbs (g)</label>
+                                <input type="number" class="form-control" id="mealCarbs" placeholder="0" min="0">
+                            </div>
+                            <div class="col-4 mb-3">
+                                <label class="form-label">Fat (g)</label>
+                                <input type="number" class="form-control" id="mealFat" placeholder="0" min="0">
+                            </div>
+                            <div class="col-4 mb-3">
+                                <label class="form-label">Fiber (g)</label>
+                                <input type="number" class="form-control" id="mealFiber" placeholder="0" min="0">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnAddMeal">
+                        <i class="bi bi-plus-lg"></i> Add Food
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Exercise Modal -->
+    <div class="modal fade" id="addExerciseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-lightning-charge"></i> Log Exercise</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Exercise Name</label>
+                        <input type="text" class="form-control" id="exerciseName" placeholder="e.g., Running, Weight Training">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" id="exerciseType">
+                            <option value="cardio">Cardio</option>
+                            <option value="strength">Strength</option>
+                            <option value="flexibility">Flexibility/Yoga</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Duration (min)</label>
+                            <input type="number" class="form-control" id="exerciseDuration" placeholder="30" min="0">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Calories Burned</label>
+                            <input type="number" class="form-control" id="exerciseCalories" placeholder="200" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="btnAddExercise">
+                        <i class="bi bi-plus-lg"></i> Add Exercise
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goals Modal -->
+    <div class="modal fade" id="goalsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-bullseye"></i> Daily Goals</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Calorie Goal</label>
+                        <input type="number" class="form-control" id="goalCalories" value="2000">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Protein (g)</label>
+                        <input type="number" class="form-control" id="goalProtein" value="50">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Carbs (g)</label>
+                        <input type="number" class="form-control" id="goalCarbs" value="250">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fat (g)</label>
+                        <input type="number" class="form-control" id="goalFat" value="65">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fiber (g)</label>
+                        <input type="number" class="form-control" id="goalFiber" value="25">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveGoals">Save Goals</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal Calculator Modal -->
+    <div class="modal fade" id="goalWizardModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-calculator"></i> Calculate Your Goals</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Weight (kg)</label>
+                            <input type="number" class="form-control" id="wizardWeight" placeholder="70">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Height (cm)</label>
+                            <input type="number" class="form-control" id="wizardHeight" placeholder="170">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Age</label>
+                            <input type="number" class="form-control" id="wizardAge" placeholder="30">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Gender</label>
+                            <select class="form-select" id="wizardGender">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Activity Level</label>
+                        <select class="form-select" id="wizardActivity">
+                            <option value="sedentary">Sedentary (little/no exercise)</option>
+                            <option value="light">Light (1-3 days/week)</option>
+                            <option value="moderate" selected>Moderate (3-5 days/week)</option>
+                            <option value="active">Active (6-7 days/week)</option>
+                            <option value="veryActive">Very Active (hard exercise daily)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Goal</label>
+                        <select class="form-select" id="wizardGoal">
+                            <option value="lose">Lose Weight</option>
+                            <option value="maintain" selected>Maintain Weight</option>
+                            <option value="gain">Gain Muscle</option>
+                        </select>
+                    </div>
+                    <div id="calculatedGoals" class="alert alert-info" style="display:none;">
+                        <!-- Results will appear here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-info" id="btnCalculateGoals">
+                        <i class="bi bi-calculator"></i> Calculate
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnApplyGoals" style="display:none;">
+                        Apply Goals
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Biometrics Modal -->
+    <div class="modal fade" id="biometricsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-speedometer2"></i> Log Biometrics</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Weight (kg)</label>
+                            <input type="number" class="form-control" id="bioWeight" step="0.1">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Body Fat %</label>
+                            <input type="number" class="form-control" id="bioBodyFat" step="0.1">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Waist (cm)</label>
+                        <input type="number" class="form-control" id="bioWaist" step="0.1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveBiometrics">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentDate = new Date();
+        let currentLog = null;
+        let macroChart = null;
+        let weeklyChart = null;
+        let weightChart = null;
+        let calculatedGoalsData = null;
+
+        function getDateString(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatDate(date) {
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            if (getDateString(date) === getDateString(today)) return 'Today';
+            if (getDateString(date) === getDateString(yesterday)) return 'Yesterday';
+            
+            return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadDayData() {
+            const dateString = getDateString(currentDate);
+            $('#currentDate').text(formatDate(currentDate));
+            $('#dateSubtext').text(dateString);
+
+            try {
+                const response = await $.get(`/api/nutrition/log/${dateString}`);
+                if (response.success) {
+                    currentLog = response.log;
+                    updateDisplay(response.log);
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        function updateDisplay(log) {
+            const totals = log.dailyTotals || {};
+            const goals = log.goals || { calories: 2000, protein: 50, carbs: 250, fat: 65, fiber: 25 };
+            const burned = log.caloriesBurned || 0;
+
+            // Energy Balance
+            $('#caloriesIn').text(totals.calories || 0);
+            $('#caloriesBurned').text(burned);
+            $('#caloriesNet').text((totals.calories || 0) - burned);
+
+            // Circular Progress
+            updateCircularProgress(totals.calories || 0, goals.calories);
+            $('#caloriesValue').text(totals.calories || 0);
+            $('#caloriesGoal').text(goals.calories);
+
+            // Macro Bars
+            updateMacroBar('protein', totals.protein || 0, goals.protein);
+            updateMacroBar('carbs', totals.carbs || 0, goals.carbs);
+            updateMacroBar('fat', totals.fat || 0, goals.fat);
+            updateMacroBar('fiber', totals.fiber || 0, goals.fiber);
+
+            // Update goals in modal
+            $('#goalCalories').val(goals.calories);
+            $('#goalProtein').val(goals.protein);
+            $('#goalCarbs').val(goals.carbs);
+            $('#goalFat').val(goals.fat);
+            $('#goalFiber').val(goals.fiber);
+
+            // Update charts
+            updateMacroChart(totals);
+            
+            // Render food diary
+            renderFoodDiary(log.meals || []);
+            
+            // Render exercises
+            renderExercises(log.exercises || []);
+            
+            // Water
+            renderWaterGlasses(log.water || 0);
+            
+            // Mood
+            updateMoodSelector(log.mood || '');
+            
+            // Biometrics
+            $('#currentWeight').text(log.biometrics?.weight || '--');
+            $('#currentBodyFat').text(log.biometrics?.bodyFat ? log.biometrics.bodyFat + '%' : '--');
+            if (log.biometrics?.weight) {
+                $('#bioWeight').val(log.biometrics.weight);
+            }
+            if (log.biometrics?.bodyFat) {
+                $('#bioBodyFat').val(log.biometrics.bodyFat);
+            }
+        }
+
+        function updateCircularProgress(value, goal) {
+            const percentage = Math.min(100, (value / goal) * 100);
+            const circumference = 2 * Math.PI * 58;
+            const offset = circumference - (percentage / 100) * circumference;
+            $('#caloriesRing .progress-value').css('stroke-dashoffset', offset);
+        }
+
+        function updateMacroBar(name, value, goal) {
+            const percentage = Math.min(100, (value / goal) * 100);
+            $(`#${name}Value`).text(value);
+            $(`#${name}Goal`).text(goal);
+            $(`#${name}Bar`).css('width', percentage + '%');
+        }
+
+        function updateMacroChart(totals) {
+            const ctx = document.getElementById('macroChart').getContext('2d');
+            
+            if (macroChart) macroChart.destroy();
+            
+            const protein = totals.protein || 0;
+            const carbs = totals.carbs || 0;
+            const fat = totals.fat || 0;
+            
+            if (protein + carbs + fat === 0) {
+                macroChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['No data'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#e5e7eb']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'right' } }
+                    }
+                });
+                return;
+            }
+            
+            macroChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [`Protein ${protein}g`, `Carbs ${carbs}g`, `Fat ${fat}g`],
+                    datasets: [{
+                        data: [protein * 4, carbs * 4, fat * 9],
+                        backgroundColor: ['#22c55e', '#f59e0b', '#3b82f6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '60%',
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        }
+
+        function renderFoodDiary(meals) {
+            const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+            const mealLabels = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' };
+            const mealIcons = { breakfast: 'bi-sunrise', lunch: 'bi-sun', dinner: 'bi-moon-stars', snack: 'bi-apple' };
+            
+            let html = '';
+            
+            mealTypes.forEach(type => {
+                const typeMeals = meals.filter(m => m.mealType === type);
+                const typeCalories = typeMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
+                
+                html += `
+                    <div class="meal-section ${type}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0"><i class="bi ${mealIcons[type]} me-2"></i>${mealLabels[type]}</h6>
+                            <span class="badge bg-secondary">${typeCalories} cal</span>
+                        </div>
+                `;
+                
+                if (typeMeals.length === 0) {
+                    html += `<p class="text-muted small mb-0">No ${type} logged</p>`;
+                } else {
+                    typeMeals.forEach(meal => {
+                        html += `
+                            <div class="food-item">
+                                <div>
+                                    <strong>${escapeHtml(meal.name)}</strong>
+                                    <br><small class="text-muted">${escapeHtml(meal.servingSize || '1 serving')} • ${meal.calories} cal</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger btn-remove-meal" data-meal-id="${meal._id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                    });
+                }
+                
+                html += '</div>';
+            });
+            
+            $('#foodDiary').html(html);
+        }
+
+        function renderExercises(exercises) {
+            if (!exercises || exercises.length === 0) {
+                $('#exerciseList').html('<p class="text-muted text-center mb-0">No exercises logged</p>');
+                return;
+            }
+            
+            const html = exercises.map(ex => `
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div>
+                        <strong>${escapeHtml(ex.name)}</strong>
+                        <br><small class="text-muted">${ex.duration} min • ${ex.caloriesBurned} cal burned</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger btn-remove-exercise" data-exercise-id="${ex._id}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+            
+            $('#exerciseList').html(html);
+        }
+
+        function renderWaterGlasses(count) {
+            let html = '';
+            for (let i = 1; i <= 8; i++) {
+                html += `<div class="water-glass ${i <= count ? 'filled' : ''}" data-water-count="${i}" title="${i} glasses"></div>`;
+            }
+            $('#waterGlasses').html(html);
+            $('#waterCount').text(count);
+        }
+
+        function updateMoodSelector(mood) {
+            $('.mood-btn').removeClass('active');
+            if (mood) {
+                $(`.mood-btn[data-mood="${mood}"]`).addClass('active');
+            }
+        }
+
+        async function setWater(glasses) {
+            try {
+                await $.ajax({
+                    url: '/api/nutrition/water',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ date: getDateString(currentDate), glasses })
+                });
+                renderWaterGlasses(glasses);
+            } catch (error) {
+                console.error('Error updating water:', error);
+            }
+        }
+
+        async function setMood(mood) {
+            try {
+                await $.ajax({
+                    url: '/api/nutrition/mood',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ date: getDateString(currentDate), mood })
+                });
+                updateMoodSelector(mood);
+            } catch (error) {
+                console.error('Error updating mood:', error);
+            }
+        }
+
+        async function addMeal() {
+            const mealName = $('#mealName').val().trim();
+            const data = {
+                date: getDateString(currentDate),
+                mealType: $('input[name="mealType"]:checked').val(),
+                name: mealName,
+                servingSize: $('#servingSize').val() || '1 serving',
+                calories: parseInt($('#mealCalories').val()) || 0,
+                protein: parseInt($('#mealProtein').val()) || 0,
+                carbs: parseInt($('#mealCarbs').val()) || 0,
+                fat: parseInt($('#mealFat').val()) || 0,
+                fiber: parseInt($('#mealFiber').val()) || 0
+            };
+
+            if (!mealName) {
+                alert('Please enter a food name');
+                return;
+            }
+
+            try {
+                const response = await $.ajax({
+                    url: '/api/nutrition/log/meal',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data)
+                });
+                
+                if (response.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addMealModal'));
+                    if (modal) modal.hide();
+                    $('#addMealForm')[0].reset();
+                    await loadDayData();
+                    loadWeeklyChart();
+                } else {
+                    alert('Failed to add food: ' + (response.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Meal add error:', error);
+                alert('Failed to add food: ' + (error.responseJSON?.error || error.message || 'Server error'));
+            }
+        }
+
+        async function removeMeal(mealId) {
+            if (!confirm('Remove this food?')) return;
+            
+            try {
+                await $.ajax({
+                    url: `/api/nutrition/log/meal/${getDateString(currentDate)}/${mealId}`,
+                    method: 'DELETE'
+                });
+                loadDayData();
+                loadWeeklyChart();
+            } catch (error) {
+                alert('Failed to remove food');
+            }
+        }
+
+        async function addExercise() {
+            const exerciseName = $('#exerciseName').val().trim();
+            const data = {
+                date: getDateString(currentDate),
+                name: exerciseName,
+                type: $('#exerciseType').val(),
+                duration: parseInt($('#exerciseDuration').val()) || 0,
+                caloriesBurned: parseInt($('#exerciseCalories').val()) || 0
+            };
+
+            if (!exerciseName) {
+                alert('Please enter an exercise name');
+                return;
+            }
+
+            try {
+                const response = await $.ajax({
+                    url: '/api/nutrition/log/exercise',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data)
+                });
+                
+                if (response.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addExerciseModal'));
+                    if (modal) modal.hide();
+                    $('#exerciseName').val('');
+                    $('#exerciseDuration').val('');
+                    $('#exerciseCalories').val('');
+                    await loadDayData();
+                } else {
+                    alert('Failed to add exercise: ' + (response.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Exercise add error:', error);
+                alert('Failed to add exercise: ' + (error.responseJSON?.error || error.message || 'Server error'));
+            }
+        }
+
+        async function removeExercise(exerciseId) {
+            if (!confirm('Remove this exercise?')) return;
+            
+            try {
+                await $.ajax({
+                    url: `/api/nutrition/log/exercise/${getDateString(currentDate)}/${exerciseId}`,
+                    method: 'DELETE'
+                });
+                loadDayData();
+            } catch (error) {
+                alert('Failed to remove exercise');
+            }
+        }
+
+        async function saveGoals() {
+            const goals = {
+                calories: parseInt($('#goalCalories').val()) || 2000,
+                protein: parseInt($('#goalProtein').val()) || 50,
+                carbs: parseInt($('#goalCarbs').val()) || 250,
+                fat: parseInt($('#goalFat').val()) || 65,
+                fiber: parseInt($('#goalFiber').val()) || 25
+            };
+
+            try {
+                const response = await $.ajax({
+                    url: '/api/nutrition/goals',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ date: getDateString(currentDate), goals })
+                });
+                if (response.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('goalsModal'));
+                    if (modal) modal.hide();
+                    await loadDayData();
+                } else {
+                    alert('Failed to save goals: ' + (response.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Goals save error:', error);
+                alert('Failed to save goals: ' + (error.responseJSON?.error || error.message || 'Server error'));
+            }
+        }
+
+        async function saveBiometrics() {
+            const data = {
+                date: getDateString(currentDate),
+                weight: parseFloat($('#bioWeight').val()) || undefined,
+                bodyFat: parseFloat($('#bioBodyFat').val()) || undefined,
+                waist: parseFloat($('#bioWaist').val()) || undefined
+            };
+
+            try {
+                const response = await $.ajax({
+                    url: '/api/nutrition/biometrics',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data)
+                });
+                if (response.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('biometricsModal'));
+                    if (modal) modal.hide();
+                    await loadDayData();
+                    loadWeightChart();
+                } else {
+                    alert('Failed to save biometrics: ' + (response.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Biometrics save error:', error);
+                alert('Failed to save biometrics: ' + (error.responseJSON?.error || error.message || 'Server error'));
+            }
+        }
+
+        async function calculateGoals() {
+            const data = {
+                weight: parseFloat($('#wizardWeight').val()),
+                height: parseFloat($('#wizardHeight').val()),
+                age: parseInt($('#wizardAge').val()) || 30,
+                gender: $('#wizardGender').val(),
+                activityLevel: $('#wizardActivity').val(),
+                goal: $('#wizardGoal').val()
+            };
+
+            if (!data.weight || !data.height) {
+                alert('Please enter weight and height');
+                return;
+            }
+
+            try {
+                const response = await $.ajax({
+                    url: '/api/nutrition/calculate-goals',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data)
+                });
+
+                if (response.success) {
+                    calculatedGoalsData = response.goals;
+                    $('#calculatedGoals').html(`
+                        <h6>Your Calculated Goals:</h6>
+                        <p class="mb-1"><strong>BMR:</strong> ${response.bmr} cal/day</p>
+                        <p class="mb-1"><strong>TDEE:</strong> ${response.tdee} cal/day</p>
+                        <hr>
+                        <p class="mb-1"><strong>Calories:</strong> ${response.goals.calories}</p>
+                        <p class="mb-1"><strong>Protein:</strong> ${response.goals.protein}g</p>
+                        <p class="mb-1"><strong>Carbs:</strong> ${response.goals.carbs}g</p>
+                        <p class="mb-1"><strong>Fat:</strong> ${response.goals.fat}g</p>
+                        <p class="mb-0"><strong>Fiber:</strong> ${response.goals.fiber}g</p>
+                    `).show();
+                    $('#btnApplyGoals').show();
+                }
+            } catch (error) {
+                alert('Failed to calculate goals');
+            }
+        }
+
+        async function applyCalculatedGoals() {
+            if (!calculatedGoalsData) return;
+            
+            try {
+                const response = await $.ajax({
+                    url: '/api/nutrition/goals',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ date: getDateString(currentDate), goals: calculatedGoalsData })
+                });
+                if (response.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('goalWizardModal'));
+                    if (modal) modal.hide();
+                    await loadDayData();
+                    alert('Goals applied successfully!');
+                } else {
+                    alert('Failed to apply goals: ' + (response.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Apply goals error:', error);
+                alert('Failed to apply goals: ' + (error.responseJSON?.error || error.message || 'Server error'));
+            }
+        }
+
+        async function loadWeeklyChart() {
+            try {
+                const response = await $.get('/api/nutrition/history/7');
+                if (!response.success) return;
+
+                const labels = [];
+                const data = [];
+                
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    const dateStr = getDateString(date);
+                    labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+                    const log = response.history.find(h => h.dateString === dateStr);
+                    data.push(log?.dailyTotals?.calories || 0);
+                }
+
+                if (weeklyChart) weeklyChart.destroy();
+                
+                const ctx = document.getElementById('weeklyChart').getContext('2d');
+                weeklyChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Calories',
+                            data,
+                            backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading weekly chart:', error);
+            }
+        }
+
+        async function loadWeightChart() {
+            try {
+                const response = await $.get('/api/nutrition/biometrics/history/30');
+                if (!response.success || response.history.length === 0) {
+                    return;
+                }
+
+                const labels = response.history.map(h => h.date.slice(5));
+                const data = response.history.map(h => h.weight);
+
+                if (weightChart) weightChart.destroy();
+                
+                const ctx = document.getElementById('weightChart').getContext('2d');
+                weightChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Weight',
+                            data,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: false } }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading weight chart:', error);
+            }
+        }
+
+        async function loadStreak() {
+            try {
+                const response = await $.get('/api/nutrition/streak');
+                if (response.success && response.streak > 0) {
+                    $('#streakCount').text(response.streak);
+                    $('#streakBadge').show();
+                }
+            } catch (error) {
+                console.error('Error loading streak:', error);
+            }
+        }
+
+        // Event Listeners
+        $('#prevDay').click(() => {
+            currentDate.setDate(currentDate.getDate() - 1);
+            loadDayData();
+        });
+
+        $('#nextDay').click(() => {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            if (currentDate < tomorrow) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                loadDayData();
+            }
+        });
+
+        $('#todayBtn').click(() => {
+            currentDate = new Date();
+            loadDayData();
+        });
+
+        $('#moodSelector').on('click', '.mood-btn', function() {
+            const mood = $(this).data('mood');
+            setMood(mood);
+        });
+
+        // Modal button handlers
+        $('#btnAddMeal').click(() => addMeal());
+        $('#btnAddExercise').click(() => addExercise());
+        $('#btnSaveGoals').click(() => saveGoals());
+        $('#btnCalculateGoals').click(() => calculateGoals());
+        $('#btnApplyGoals').click(() => applyCalculatedGoals());
+        $('#btnSaveBiometrics').click(() => saveBiometrics());
+
+        // Event delegation for dynamically rendered elements
+        $('#foodDiary').on('click', '.btn-remove-meal', function() {
+            const mealId = $(this).data('meal-id');
+            removeMeal(mealId);
+        });
+
+        $('#exerciseList').on('click', '.btn-remove-exercise', function() {
+            const exerciseId = $(this).data('exercise-id');
+            removeExercise(exerciseId);
+        });
+
+        $('#waterGlasses').on('click', '.water-glass', function() {
+            const count = $(this).data('water-count');
+            setWater(count);
+        });
+
+        // Initialize
+        $(document).ready(() => {
+            loadDayData();
+            loadWeeklyChart();
+            loadWeightChart();
+            loadStreak();
+        });
+    </script>
+</body>
+</html>

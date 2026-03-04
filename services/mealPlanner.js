@@ -1,31 +1,122 @@
 const { generateMealPlanWithAI, isInitialized } = require('./aiMealGenerator');
+const Redis = require('ioredis');
 
-// In-memory cache for AI-generated meal plans
-const mealPlanCache = new Map();
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+// Redis configuration
+const CACHE_PREFIX = 'mealplan:';
+const CACHE_DURATION = 24 * 60 * 60; // 24 hours in seconds (for Redis TTL)
 
-// Meal database - commented out (AI-only mode)
-const mealDatabase = {};
+// Initialize Redis client
+let redis = null;
+let redisConnected = false;
 
-// Health condition meal preferences
-const healthConditionPreferences = {
-  'gallstones': 'lowFat',
-  'diabetes': 'diabetic',
-  'high blood pressure': 'lowFat',
-  'heart disease': 'lowFat',
-  'obesity': 'highProtein',
-  'default': 'general'
-};
-
-function getMealCategory(healthConditions) {
-  if (!healthConditions || healthConditions.length === 0) {
-    return 'general';
-  }
+function initializeRedis() {
+  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
   
-  // Check for specific conditions
-  const condition = healthConditions[0].toLowerCase();
-  return healthConditionPreferences[condition] || healthConditionPreferences['default'];
+  try {
+    redis = new Redis(redisUrl, {
+      maxRetriesPerRequest: 3,
+      retryDelayOnFailover: 100,
+      lazyConnect: true,
+      connectTimeout: 5000
+    });
+
+    redis.on('connect', () => {
+      console.log('✅ Redis connected successfully');
+      redisConnected = true;
+    });
+
+    redis.on('error', (err) => {
+      console.warn('⚠️ Redis error:', err.message);
+      redisConnected = false;
+    });
+
+    redis.on('close', () => {
+      console.warn('⚠️ Redis connection closed');
+      redisConnected = false;
+    });
+
+    redis.connect().catch(err => {
+      console.warn('⚠️ Redis connection failed, using in-memory fallback:', err.message);
+    });
+
+  } catch (error) {
+    console.warn('⚠️ Redis initialization failed, using in-memory fallback:', error.message);
+  }
 }
+
+// Initialize Redis on module load
+initializeRedis();
+
+// Graceful Redis shutdown
+async function closeRedis() {
+  if (redis) {
+    try {
+      await redis.quit();
+      console.log('Redis connection closed.');
+    } catch (err) {
+      console.error('Error closing Redis:', err.message);
+    }
+  }
+}
+
+// Fallback in-memory cache (used when Redis is unavailable)
+const memoryCache = new Map();
+const MAX_MEMORY_ENTRIES = 50;
+
+function pruneMemoryCache() {
+  if (memoryCache.size <= MAX_MEMORY_ENTRIES) return;
+  const entries = Array.from(memoryCache.entries());
+  entries.sort((a, b) => (a[1]?.timestamp || 0) - (b[1]?.timestamp || 0));
+  const removeCount = Math.max(0, memoryCache.size - MAX_MEMORY_ENTRIES);
+  for (let i = 0; i < removeCount; i++) {
+    memoryCache.delete(entries[i][0]);
+  }
+}
+
+// Cache operations with Redis + memory fallback
+async function getFromCache(key) {
+  // Try Redis first
+  if (redis && redisConnected) {
+    try {
+      const data = await redis.get(CACHE_PREFIX + key);
+      if (data) {
+        console.log('📦 Cache hit (Redis):', key);
+        return JSON.parse(data);
+      }
+    } catch (err) {
+      console.warn('Redis get error:', err.message);
+    }
+  }
+
+  // Fallback to memory cache
+  const cached = memoryCache.get(key);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION * 1000) {
+    console.log('📦 Cache hit (memory):', key);
+    return cached.data;
+  }
+
+  return null;
+}
+
+async function setToCache(key, data) {
+  // Try Redis first
+  if (redis && redisConnected) {
+    try {
+      await redis.setex(CACHE_PREFIX + key, CACHE_DURATION, JSON.stringify(data));
+      console.log('💾 Cached to Redis:', key);
+    } catch (err) {
+      console.warn('Redis set error:', err.message);
+    }
+  }
+
+  // Also store in memory cache as fallback
+  memoryCache.set(key, {
+    data: data,
+    timestamp: Date.now()
+  });
+  pruneMemoryCache();
+}
+
 
 function calculateDailyCalories(weight, height, age = 30) {
   // Using Mifflin-St Jeor Equation for BMR (Basal Metabolic Rate)
@@ -43,6 +134,8 @@ function calculateDailyCalories(weight, height, age = 30) {
   return Math.round(dailyCalories);
 }
 
+// Fallback grocery list generator - extracts ingredients from meals
+// Used only if AI doesn't return a grocery list
 function generateGroceryList(weeklyPlan) {
   const groceryMap = new Map();
   const categories = {
@@ -55,130 +148,94 @@ function generateGroceryList(weeklyPlan) {
     'Other': ['salt', 'pepper', 'dark chocolate', 'dried fruits']
   };
 
+  function categorizeIngredient(ingredientStr) {
+    const lower = ingredientStr.toLowerCase();
+    for (const [category, items] of Object.entries(categories)) {
+      if (items.some(item => lower.includes(item) || item.includes(lower))) {
+        return category;
+      }
+    }
+    return 'Other';
+  }
+
+  function processIngredients(ingredients) {
+    if (!ingredients || !Array.isArray(ingredients)) return;
+    ingredients.forEach(ingredient => {
+      if (ingredient === null || ingredient === undefined) return;
+      const ingredientStr = String(ingredient).trim();
+      if (!ingredientStr) return;
+      const lowerIngredient = ingredientStr.toLowerCase();
+      const existing = groceryMap.get(lowerIngredient) || { 
+        item: ingredientStr, 
+        quantity: 0, 
+        category: categorizeIngredient(ingredientStr) 
+      };
+      existing.quantity += 1;
+      groceryMap.set(lowerIngredient, existing);
+    });
+  }
+
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   
   days.forEach(day => {
     const dayPlan = weeklyPlan[day];
-    if (dayPlan) {
-      // Process breakfast
-      if (dayPlan.breakfast && dayPlan.breakfast.ingredients) {
-        dayPlan.breakfast.ingredients.forEach(ingredient => {
-          const lowerIngredient = ingredient.toLowerCase();
-          const existing = groceryMap.get(lowerIngredient) || { item: ingredient, quantity: 0, category: 'Other' };
-          existing.quantity += 1;
-          
-          // Categorize
-          for (const [category, items] of Object.entries(categories)) {
-            if (items.some(item => lowerIngredient.includes(item) || item.includes(lowerIngredient))) {
-              existing.category = category;
-              break;
-            }
-          }
-          groceryMap.set(lowerIngredient, existing);
-        });
+    if (!dayPlan) return;
+    
+    // Process all meal types
+    ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
+      if (dayPlan[mealType]?.ingredients) {
+        processIngredients(dayPlan[mealType].ingredients);
       }
-      
-      // Process lunch
-      if (dayPlan.lunch && dayPlan.lunch.ingredients) {
-        dayPlan.lunch.ingredients.forEach(ingredient => {
-          const lowerIngredient = ingredient.toLowerCase();
-          const existing = groceryMap.get(lowerIngredient) || { item: ingredient, quantity: 0, category: 'Other' };
-          existing.quantity += 1;
-          
-          for (const [category, items] of Object.entries(categories)) {
-            if (items.some(item => lowerIngredient.includes(item) || item.includes(lowerIngredient))) {
-              existing.category = category;
-              break;
-            }
-          }
-          groceryMap.set(lowerIngredient, existing);
-        });
-      }
-      
-      // Process dinner
-      if (dayPlan.dinner && dayPlan.dinner.ingredients) {
-        dayPlan.dinner.ingredients.forEach(ingredient => {
-          const lowerIngredient = ingredient.toLowerCase();
-          const existing = groceryMap.get(lowerIngredient) || { item: ingredient, quantity: 0, category: 'Other' };
-          existing.quantity += 1;
-          
-          for (const [category, items] of Object.entries(categories)) {
-            if (items.some(item => lowerIngredient.includes(item) || item.includes(lowerIngredient))) {
-              existing.category = category;
-              break;
-            }
-          }
-          groceryMap.set(lowerIngredient, existing);
-        });
-      }
-      
-      // Process snacks
-      if (dayPlan.snacks && Array.isArray(dayPlan.snacks)) {
-        dayPlan.snacks.forEach(snack => {
-          if (snack.ingredients) {
-            snack.ingredients.forEach(ingredient => {
-              const lowerIngredient = ingredient.toLowerCase();
-              const existing = groceryMap.get(lowerIngredient) || { item: ingredient, quantity: 0, category: 'Other' };
-              existing.quantity += 1;
-              
-              for (const [category, items] of Object.entries(categories)) {
-                if (items.some(item => lowerIngredient.includes(item) || item.includes(lowerIngredient))) {
-                  existing.category = category;
-                  break;
-                }
-              }
-              groceryMap.set(lowerIngredient, existing);
-            });
-          }
-        });
-      }
+    });
+    
+    // Process snacks
+    if (Array.isArray(dayPlan.snacks)) {
+      dayPlan.snacks.forEach(snack => {
+        if (snack?.ingredients) {
+          processIngredients(snack.ingredients);
+        }
+      });
     }
   });
 
   // Convert to array and format quantities
-  const groceryList = Array.from(groceryMap.values()).map(item => ({
-    item: item.item.charAt(0).toUpperCase() + item.item.slice(1),
-    quantity: item.quantity > 1 ? `${item.quantity} units` : '1 unit',
-    category: item.category
-  }));
+  const groceryList = Array.from(groceryMap.values()).map(item => {
+    const itemStr = String(item.item || '').trim();
+    return {
+      item: itemStr ? (itemStr.charAt(0).toUpperCase() + itemStr.slice(1)) : '',
+      quantity: item.quantity > 1 ? `${item.quantity} units` : '1 unit',
+      category: item.category
+    };
+  }).filter(i => i.item);
 
   // Sort by category
-  return groceryList.sort((a, b) => {
-    const categoryOrder = ['Produce', 'Protein', 'Grains', 'Dairy', 'Pantry', 'Nuts & Seeds', 'Other'];
-    return categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
-  });
+  const categoryOrder = ['Produce', 'Protein', 'Grains', 'Dairy', 'Pantry', 'Nuts & Seeds', 'Other'];
+  return groceryList.sort((a, b) => categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category));
 }
 
-function getRandomMeal(mealArray) {
-  return mealArray[Math.floor(Math.random() * mealArray.length)];
-}
-
-// Fallback function - disabled (AI-only mode)
-// function generateWeeklyMealPlanFallback(weight, height, healthConditions, includeGroceryList = true) {
-//   // Uncomment mealDatabase above and this function to enable fallback mode
-// }
 
 async function generateWeeklyMealPlan(weight, height, healthConditions, includeGroceryList = true) {
   const dailyCalories = calculateDailyCalories(weight, height);
   
-  // Create cache key (include grocery list option in cache key)
+  // Create cache key (include all conditions and grocery list option)
   const conditionKey = healthConditions && healthConditions.length > 0 
-    ? healthConditions[0].toLowerCase() 
+    ? healthConditions.map(c => c.toLowerCase()).sort().join('|')
     : 'none';
   const cacheKey = `${weight}_${height}_${conditionKey}_${includeGroceryList}`;
   
-  // Check cache
-  const cached = mealPlanCache.get(cacheKey);
-  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-    console.log('Returning cached meal plan');
-    return cached.data;
+  // Check cache (Redis with memory fallback)
+  const cached = await getFromCache(cacheKey);
+  if (cached) {
+    console.log('✅ Returning cached meal plan');
+    return cached;
   }
 
   // Try AI generation if available
   if (isInitialized() && process.env.GEMINI_API_KEY) {
     try {
-      console.log('Generating meal plan with AI...');
-      const aiWeeklyPlan = await generateMealPlanWithAI(weight, height, healthConditions, dailyCalories);
+      console.log('🤖 Generating meal plan with AI...');
+      const aiResponse = await generateMealPlanWithAI(weight, height, healthConditions, dailyCalories);
+      const { weeklyPlan: aiWeeklyPlan, groceryList: aiGroceryList } = aiResponse;
       
       // Calculate total calories
       const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -195,8 +252,13 @@ async function generateWeeklyMealPlan(weight, height, healthConditions, includeG
         }
       });
 
-      // Generate grocery list only if requested
-      const groceryList = includeGroceryList ? generateGroceryList(aiWeeklyPlan) : [];
+      // Use AI-generated grocery list, or fall back to extracting from meals
+      let groceryList = [];
+      if (includeGroceryList) {
+        groceryList = aiGroceryList && aiGroceryList.length > 0 
+          ? aiGroceryList 
+          : generateGroceryList(aiWeeklyPlan);
+      }
       
       const result = {
         weeklyPlan: aiWeeklyPlan,
@@ -204,13 +266,10 @@ async function generateWeeklyMealPlan(weight, height, healthConditions, includeG
         totalCalories: Math.round(totalCalories / 7)
       };
 
-      // Cache the result
-      mealPlanCache.set(cacheKey, {
-        data: result,
-        timestamp: Date.now()
-      });
+      // Cache the result (Redis with memory fallback)
+      await setToCache(cacheKey, result);
 
-      console.log('AI meal plan generated successfully');
+      console.log('✅ AI meal plan generated and cached successfully');
       return result;
     } catch (error) {
       console.error('AI generation failed:', error.message);
@@ -238,6 +297,7 @@ async function generateWeeklyMealPlan(weight, height, healthConditions, includeG
 
 module.exports = {
   generateWeeklyMealPlan,
-  calculateDailyCalories
+  calculateDailyCalories,
+  closeRedis
 };
 

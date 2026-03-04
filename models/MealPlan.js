@@ -46,5 +46,9 @@ const mealPlanSchema = new mongoose.Schema({
   }
 });
 
+// Add indexes for better query performance
+mealPlanSchema.index({ userId: 1, createdAt: -1 });
+mealPlanSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('MealPlan', mealPlanSchema);
 

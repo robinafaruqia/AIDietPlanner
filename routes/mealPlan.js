@@ -5,6 +5,33 @@ const User = require('../models/User');
 const MealPlan = require('../models/MealPlan');
 const { generateWeeklyMealPlan } = require('../services/mealPlanner');
 
+function parseFiniteNumber(value) {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseBoolean(value, defaultValue = true) {
+  if (value === undefined || value === null) return defaultValue;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    if (v === 'true') return true;
+    if (v === 'false') return false;
+  }
+  return defaultValue;
+}
+
+function normalizeHealthConditions(healthConditions) {
+  const raw = Array.isArray(healthConditions)
+    ? healthConditions
+    : (healthConditions ? [healthConditions] : []);
+
+  return raw
+    .map(v => (v === null || v === undefined ? '' : String(v).trim()))
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
 // Background function to save meal plan to database (non-blocking)
 async function saveMealPlanToDatabase(weight, height, conditions, mealPlanData) {
   try {
@@ -59,29 +86,29 @@ async function saveMealPlanToDatabase(weight, height, conditions, mealPlanData) 
 // Generate meal plan
 router.post('/generate', async (req, res) => {
   try {
-    const { weight, height, healthConditions, includeGroceryList = true } = req.body;
+    const { weight, height, healthConditions, includeGroceryList } = req.body || {};
 
-    if (!weight || weight <= 0) {
+    const parsedWeight = parseFiniteNumber(weight);
+    if (parsedWeight === null || parsedWeight <= 0) {
       return res.status(400).json({ error: 'Valid weight is required' });
     }
 
-    if (!height || height <= 0) {
+    const parsedHeight = parseFiniteNumber(height);
+    if (parsedHeight === null || parsedHeight <= 0) {
       return res.status(400).json({ error: 'Valid height is required' });
     }
 
-    const conditions = Array.isArray(healthConditions) 
-      ? healthConditions 
-      : (healthConditions ? [healthConditions] : []);
+    const conditions = normalizeHealthConditions(healthConditions);
+    const includeList = parseBoolean(includeGroceryList, true);
 
     const startTime = Date.now();
     
     // Generate meal plan (this is the main operation - AI call)
-    // Pass includeGroceryList option
     const mealPlanData = await generateWeeklyMealPlan(
-      parseFloat(weight), 
-      parseFloat(height), 
+      parsedWeight,
+      parsedHeight,
       conditions,
-      includeGroceryList
+      includeList
     );
     
     const generationTime = Date.now() - startTime;
@@ -96,8 +123,8 @@ router.post('/generate', async (req, res) => {
         groceryList: mealPlanData.groceryList || [], // Empty array if not generated
         totalCalories: mealPlanData.totalCalories,
         healthConditions: conditions,
-        weight: parseFloat(weight),
-        height: parseFloat(height)
+        weight: parsedWeight,
+        height: parsedHeight
       }
     };
 
@@ -106,7 +133,7 @@ router.post('/generate', async (req, res) => {
 
     // Save to database in background (fire-and-forget)
     // This happens after response is sent, so user doesn't wait
-    saveMealPlanToDatabase(parseFloat(weight), parseFloat(height), conditions, mealPlanData)
+    saveMealPlanToDatabase(parsedWeight, parsedHeight, conditions, mealPlanData)
       .catch(err => {
         // Already handled in function, but log here too
         console.error('Background save failed:', err.message);
@@ -147,6 +174,9 @@ function getErrorHelp(errorCode) {
 // Get meal plan by ID
 router.get('/:id', async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid meal plan id' });
+    }
     const mealPlan = await MealPlan.findById(req.params.id);
     if (!mealPlan) {
       return res.status(404).json({ error: 'Meal plan not found' });

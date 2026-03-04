@@ -2,19 +2,46 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const session = require('express-session');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
 const app = express();
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '200kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.disable('x-powered-by');
+
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+const sessionSecret = process.env.SESSION_SECRET;
+if (process.env.NODE_ENV === 'production' && (!sessionSecret || sessionSecret.length < 16)) {
+  throw new Error('SESSION_SECRET must be set (>=16 chars) in production');
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  name: 'aidiet.sid',
+  secret: sessionSecret || 'dev-session-secret-change-me',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  }
 }));
 
 // View engine setup
@@ -31,8 +58,6 @@ const defaultMongoURI = isDocker
 const MONGODB_URI = process.env.MONGODB_URI || defaultMongoURI;
 
 mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   serverSelectionTimeoutMS: 5000, // Timeout after 5s
   socketTimeoutMS: 45000
 })
@@ -48,33 +73,76 @@ mongoose.connect(MONGODB_URI, {
   const safeURI = MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
   console.error('   Connection string:', safeURI);
   console.error('   Error code:', err.code || err.name);
+  console.error('');
+  console.error('💡 App will run without database — meal plans will not be saved.');
+  if (err.name === 'MongooseServerSelectionError' || MONGODB_URI.includes('mongodb.net')) {
+    console.error('   For MongoDB Atlas: add your IP in Network Access (or use 0.0.0.0/0 for testing).');
+    console.error('   Ensure the cluster is not paused and credentials in .env are correct.');
+  }
   if (err.message.includes('ECONNREFUSED')) {
-    console.error('');
-    console.error('💡 Troubleshooting:');
     if (MONGODB_URI.includes('localhost')) {
-      console.error('   - If using Docker, change MONGODB_URI to: mongodb://mongo:27017/ai-diet-planner');
-      console.error('   - Or set DOCKER_ENV=true in docker-compose.yml');
+      console.error('   For local MongoDB: start MongoDB (e.g. brew services start mongodb-community) or use Atlas.');
     } else if (MONGODB_URI.includes('mongo:')) {
-      console.error('   - Make sure MongoDB container is running: docker compose ps');
-      console.error('   - Start MongoDB: docker compose up -d mongo');
+      console.error('   For Docker: run docker compose up -d mongo');
     }
   }
 });
 
 // Routes
 const mealPlanRoutes = require('./routes/mealPlan');
+const nutritionRoutes = require('./routes/nutrition');
+const { getAllConditions } = require('./config/healthConditions');
+
+app.use('/api/', apiLimiter);
 app.use('/api/meal-plan', mealPlanRoutes);
+app.use('/api/nutrition', nutritionRoutes);
+
+app.get('/api/health-conditions', (req, res) => {
+  res.json({ success: true, conditions: getAllConditions() });
+});
 
 app.get('/', (req, res) => {
   res.render('index');
 });
 
 app.get('/plan', (req, res) => {
-  res.render('plan');
+  res.render('plan', { healthConditions: getAllConditions() });
+});
+
+app.get('/tracking', (req, res) => {
+  res.render('tracking');
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  };
+  res.json(health);
+});
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  try {
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed.');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during shutdown:', err);
+    process.exit(1);
+  }
 });
 

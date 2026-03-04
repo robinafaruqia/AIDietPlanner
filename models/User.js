@@ -23,5 +23,8 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+// Add compound index for user lookup
+userSchema.index({ weight: 1, height: 1 });
+
 module.exports = mongoose.model('User', userSchema);
 

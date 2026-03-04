@@ -1,4 +1,5 @@
 const { GoogleGenAI } = require('@google/genai');
+const { getGuidelinesForCondition } = require('../config/healthConditions');
 
 // Initialize Gemini AI
 let ai = null;
@@ -26,22 +27,11 @@ function initializeGemini() {
 // Initialize on module load (synchronous now)
 isInitialized = initializeGemini();
 
-function getHealthConditionGuidelines(condition) {
-  const guidelines = {
-    'gallstones': 'Low-fat diet. Avoid high-fat foods, fried foods, and fatty meats. Focus on lean proteins, whole grains, fruits, and vegetables.',
-    'diabetes': 'Diabetic-friendly diet. Low glycemic index foods, controlled carbohydrates, high fiber. Avoid added sugars and refined carbs.',
-    'high blood pressure': 'Heart-healthy, low-sodium diet. Focus on fruits, vegetables, whole grains, lean proteins. Limit sodium and processed foods.',
-    'heart disease': 'Heart-healthy diet. Low saturated fat, high fiber, omega-3 rich foods. Focus on fruits, vegetables, whole grains, lean proteins.',
-    'obesity': 'High-protein, calorie-controlled diet. Focus on lean proteins, vegetables, whole grains. Moderate portions with balanced macronutrients.',
-    'default': 'Balanced, nutritious diet with variety of whole foods, lean proteins, fruits, vegetables, and whole grains.'
-  };
-
-  return guidelines[condition?.toLowerCase()] || guidelines['default'];
-}
-
 function createMealPlanPrompt(weight, height, healthConditions, dailyCalories) {
-  const condition = healthConditions && healthConditions.length > 0 ? healthConditions[0] : 'none';
-  const guidelines = getHealthConditionGuidelines(condition);
+  const conditionsList = healthConditions && healthConditions.length > 0 ? healthConditions : [];
+  const conditionNames = conditionsList.length > 0 ? conditionsList.join(', ') : 'none';
+  const guidelines = conditionsList.map(c => getGuidelinesForCondition(c)).join(' ')
+    || getGuidelinesForCondition(null);
   
   // Calculate BMI for context
   const heightInMeters = height / 100;
@@ -53,7 +43,7 @@ User Profile:
 - Weight: ${weight} kg
 - Height: ${height} cm (${(height / 2.54).toFixed(1)} inches)
 - BMI: ${bmi}
-- Health Condition: ${condition}
+- Health Condition(s): ${conditionNames}
 - Target Daily Calories: ${dailyCalories} kcal
 - Dietary Guidelines: ${guidelines}
 
@@ -73,6 +63,8 @@ Requirements:
 5. Follow the dietary guidelines for the health condition
 6. Provide variety across the week
 7. Use common, accessible ingredients
+
+8. Generate a consolidated grocery list with all unique ingredients categorized
 
 Return ONLY valid JSON in this exact format (no markdown, no code blocks, just JSON):
 {
@@ -107,7 +99,12 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just J
     "friday": { ... },
     "saturday": { ... },
     "sunday": { ... }
-  }
+  },
+  "groceryList": [
+    { "item": "Chicken breast", "quantity": "1.5 lbs", "category": "Protein" },
+    { "item": "Spinach", "quantity": "2 bunches", "category": "Produce" },
+    { "item": "Brown rice", "quantity": "1 lb", "category": "Grains" }
+  ]
 }`;
 }
 
@@ -212,12 +209,13 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
     try {
       const prompt = createMealPlanPrompt(weight, height, healthConditions, dailyCalories);
       
+      const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
       console.log(`🤖 Calling Gemini API (attempt ${attempt}/${maxRetries})...`);
-      console.log(`   Model: gemini-2.0-flash`);
+      console.log(`   Model: ${modelName}`);
       console.log(`   User: ${weight}kg, ${height}cm, condition: ${healthConditions?.[0] || 'none'}`);
       
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: modelName,
         contents: prompt,
       });
       
@@ -264,15 +262,32 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
 
       const invalidDays = days.filter(day => {
         const d = mealPlanData.weeklyPlan[day];
-        return !d?.breakfast || !d?.lunch || !d?.dinner || !d?.snacks;
+        return !d?.breakfast || !d?.lunch || !d?.dinner || !Array.isArray(d?.snacks);
       });
 
       if (invalidDays.length > 0) {
         throw createUserFriendlyError('INVALID_RESPONSE', `AI response has incomplete meals for: ${invalidDays.join(', ')}`);
       }
 
+      // Validate and normalize grocery list
+      let groceryList = [];
+      if (Array.isArray(mealPlanData.groceryList)) {
+        groceryList = mealPlanData.groceryList
+          .filter(item => item && item.item)
+          .map(item => ({
+            item: String(item.item || '').trim(),
+            quantity: String(item.quantity || '1 unit').trim(),
+            category: String(item.category || 'Other').trim()
+          }));
+      }
+
       console.log('✅ Meal plan validated successfully');
-      return mealPlanData.weeklyPlan;
+      console.log(`📝 Grocery list: ${groceryList.length} items`);
+      
+      return {
+        weeklyPlan: mealPlanData.weeklyPlan,
+        groceryList: groceryList
+      };
 
     } catch (error) {
       lastError = error;
