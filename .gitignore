@@ -80,6 +80,10 @@ Thumbs.db
 *.swp
 *.swo
 
+# Cursor AI plans (local-only)
+.cursor/plans/
+.cursor/plans/*.plan.md
+
 # Local Netlify folder
 .netlify
 
