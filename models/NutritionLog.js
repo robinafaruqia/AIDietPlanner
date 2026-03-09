@@ -73,14 +73,18 @@ const exerciseLogSchema = new mongoose.Schema({
 });
 
 const nutritionLogSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
   date: {
     type: Date,
     required: true
   },
   dateString: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   meals: [mealLogSchema],
   exercises: [exerciseLogSchema],
@@ -161,11 +165,15 @@ nutritionLogSchema.pre('save', function(next) {
   next();
 });
 
-nutritionLogSchema.statics.getOrCreateForDate = async function(dateString) {
-  let log = await this.findOne({ dateString });
+nutritionLogSchema.index({ userId: 1, dateString: 1 }, { unique: true, sparse: true });
+
+nutritionLogSchema.statics.getOrCreateForDate = async function(userId, dateString) {
+  const query = userId ? { userId, dateString } : { dateString, userId: { $exists: false } };
+  let log = await this.findOne(query);
   if (!log) {
     const date = new Date(dateString + 'T00:00:00');
     log = new this({
+      userId: userId || undefined,
       date,
       dateString,
       meals: [],

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - AI Diet Planner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 60px 0 100px;
+            color: white;
+        }
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #667eea;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-content {
+            margin-top: -60px;
+            padding-bottom: 40px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: white;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 15px 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .form-control {
+            border-radius: 10px;
+            padding: 12px 15px;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #888;
+            font-size: 14px;
+        }
+        .provider-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            background: #f0f0f0;
+        }
+        .provider-badge.google {
+            background: #e8f0fe;
+            color: #4285f4;
+        }
+        .provider-badge.local {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <% const activePage = 'profile'; %>
+    <%- include('partials/navbar') %>
+
+    <div class="profile-header">
+        <div class="container text-center" style="padding-top: 20px;">
+            <div class="profile-avatar">
+                <% if (user.profileImage) { %>
+                    <img src="<%= user.profileImage %>" alt="Profile">
+                <% } else { %>
+                    <i class="bi bi-person"></i>
+                <% } %>
+            </div>
+            <h2><%= user.name %></h2>
+            <p class="mb-2"><%= user.email || 'No email set' %></p>
+            <span class="provider-badge <%= user.provider %>">
+                <% if (user.provider === 'google') { %>
+                    <i class="bi bi-google"></i> Google Account
+                <% } else { %>
+                    <i class="bi bi-envelope"></i> Email Account
+                <% } %>
+            </span>
+        </div>
+    </div>
+
+    <div class="container profile-content">
+        <% if (user.currentWeight || user.targetWeight) { %>
+        <div class="row mb-4">
+            <div class="col-md-3 col-6">
+                <div class="card stat-card">
+                    <div class="stat-value"><%= user.startWeight || '--' %></div>
+                    <div class="stat-label">Start Weight (kg)</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card stat-card">
+                    <div class="stat-value"><%= user.currentWeight || '--' %></div>
+                    <div class="stat-label">Current Weight (kg)</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card stat-card">
+                    <div class="stat-value"><%= user.targetWeight || '--' %></div>
+                    <div class="stat-label">Target Weight (kg)</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card stat-card">
+                    <% const lost = user.startWeight && user.currentWeight ? (user.startWeight - user.currentWeight).toFixed(1) : null; %>
+                    <div class="stat-value" style="color: <%= lost > 0 ? '#22c55e' : (lost < 0 ? '#ef4444' : '#667eea') %>">
+                        <%= lost ? (lost > 0 ? '-' : '+') + Math.abs(lost) : '--' %>
+                    </div>
+                    <div class="stat-label">Progress (kg)</div>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-person-gear"></i> Profile Settings
+                    </div>
+                    <div class="card-body">
+                        <div id="profileSuccess" class="alert alert-success" style="display: none;"></div>
+                        <div id="profileError" class="alert alert-danger" style="display: none;"></div>
+                        
+                        <form id="profileForm">
+                            <div class="mb-3">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" id="profileName" value="<%= user.name %>" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Height (cm)</label>
+                                <input type="number" class="form-control" id="profileHeight" value="<%= user.height || '' %>" min="100" max="250">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Target Weight (kg)</label>
+                                <input type="number" class="form-control" id="profileTargetWeight" value="<%= user.targetWeight || '' %>" min="20" max="300" step="0.1">
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i> Save Changes
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <% if (user.provider === 'local') { %>
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-shield-lock"></i> Change Password
+                    </div>
+                    <div class="card-body">
+                        <div id="passwordSuccess" class="alert alert-success" style="display: none;"></div>
+                        <div id="passwordError" class="alert alert-danger" style="display: none;"></div>
+                        
+                        <form id="passwordForm">
+                            <div class="mb-3">
+                                <label class="form-label">Current Password</label>
+                                <input type="password" class="form-control" id="currentPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="newPassword" required minlength="6">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" id="confirmNewPassword" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-key"></i> Update Password
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <% } else { %>
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-info-circle"></i> Account Info
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">
+                            You're signed in with Google. Password management is handled through your Google account.
+                        </p>
+                        <a href="https://myaccount.google.com/security" target="_blank" class="btn btn-outline-primary">
+                            <i class="bi bi-box-arrow-up-right"></i> Manage Google Account
+                        </a>
+                    </div>
+                </div>
+                <% } %>
+
+                <div class="card mt-4">
+                    <div class="card-header text-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Danger Zone
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Once you delete your account, all your data will be permanently removed.</p>
+                        <button class="btn btn-outline-danger" id="deleteAccountBtn">
+                            <i class="bi bi-trash"></i> Delete Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $('#profileForm').on('submit', async function(e) {
+            e.preventDefault();
+            $('#profileSuccess, #profileError').hide();
+            
+            try {
+                const response = await $.ajax({
+                    url: '/api/auth/update-profile',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        name: $('#profileName').val(),
+                        height: $('#profileHeight').val() || undefined,
+                        targetWeight: $('#profileTargetWeight').val() || undefined
+                    })
+                });
+                
+                if (response.success) {
+                    $('#profileSuccess').text('Profile updated successfully!').show();
+                    setTimeout(() => location.reload(), 1000);
+                }
+            } catch (error) {
+                $('#profileError').text(error.responseJSON?.error || 'Failed to update profile').show();
+            }
+        });
+
+        $('#passwordForm').on('submit', async function(e) {
+            e.preventDefault();
+            $('#passwordSuccess, #passwordError').hide();
+            
+            if ($('#newPassword').val() !== $('#confirmNewPassword').val()) {
+                $('#passwordError').text('New passwords do not match').show();
+                return;
+            }
+            
+            try {
+                const response = await $.ajax({
+                    url: '/api/auth/change-password',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        currentPassword: $('#currentPassword').val(),
+                        newPassword: $('#newPassword').val(),
+                        confirmPassword: $('#confirmNewPassword').val()
+                    })
+                });
+                
+                if (response.success) {
+                    $('#passwordSuccess').text('Password changed successfully!').show();
+                    $('#passwordForm')[0].reset();
+                }
+            } catch (error) {
+                $('#passwordError').text(error.responseJSON?.error || 'Failed to change password').show();
+            }
+        });
+
+        $('#deleteAccountBtn').click(async function() {
+            if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                return;
+            }
+            
+            if (!confirm('This will permanently delete all your meal plans, nutrition logs, and weight history. Continue?')) {
+                return;
+            }
+            
+            try {
+                await $.ajax({
+                    url: '/api/auth/account',
+                    method: 'DELETE'
+                });
+                window.location.href = '/?deleted=true';
+            } catch (error) {
+                alert(error.responseJSON?.error || 'Failed to delete account');
+            }
+        });
+    </script>
+</body>
+</html>

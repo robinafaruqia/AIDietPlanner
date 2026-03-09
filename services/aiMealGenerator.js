@@ -1,6 +1,54 @@
 const { GoogleGenAI } = require('@google/genai');
 const { getGuidelinesForCondition } = require('../config/healthConditions');
 
+// Ordered fallback list: preferred model first, then progressively safer picks.
+// The env var GEMINI_MODEL (if set and not already in the list) is prepended at runtime.
+const DEFAULT_MODEL_CHAIN = [
+  'gemini-2.0-flash',
+  'gemini-2.5-flash-preview-05-20',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+  'gemini-1.5-flash-8b',
+];
+
+function buildModelChain() {
+  const preferred = process.env.GEMINI_MODEL;
+  if (preferred && !DEFAULT_MODEL_CHAIN.includes(preferred)) {
+    return [preferred, ...DEFAULT_MODEL_CHAIN];
+  }
+  if (preferred) {
+    // Move the preferred model to the front
+    return [preferred, ...DEFAULT_MODEL_CHAIN.filter(m => m !== preferred)];
+  }
+  return [...DEFAULT_MODEL_CHAIN];
+}
+
+// Track models that recently failed with 503 so we skip them on the next request
+// Map<modelName, timestampWhenFailed> — entries expire after 5 minutes
+const unavailableModels = new Map();
+const UNAVAILABLE_TTL_MS = 5 * 60 * 1000;
+
+function markModelUnavailable(model) {
+  unavailableModels.set(model, Date.now());
+}
+
+function getAvailableModelChain() {
+  const now = Date.now();
+  const chain = buildModelChain();
+  const available = chain.filter(m => {
+    const failedAt = unavailableModels.get(m);
+    if (!failedAt) return true;
+    if (now - failedAt > UNAVAILABLE_TTL_MS) {
+      unavailableModels.delete(m);
+      return true;
+    }
+    return false;
+  });
+  // Never return an empty list — fall back to the full chain if everything was marked
+  return available.length > 0 ? available : chain;
+}
+
 // Initialize Gemini AI
 let ai = null;
 let isInitialized = false;
@@ -14,9 +62,9 @@ function initializeGemini() {
   }
 
   try {
-    // Pass API key to GoogleGenAI
     ai = new GoogleGenAI({ apiKey });
     console.log('✅ Gemini AI initialized successfully');
+    console.log(`   Model fallback chain: ${buildModelChain().join(' → ')}`);
     return true;
   } catch (error) {
     console.error('❌ Failed to initialize Gemini:', error.message);
@@ -24,7 +72,7 @@ function initializeGemini() {
   }
 }
 
-// Initialize on module load (synchronous now)
+// Initialize on module load
 isInitialized = initializeGemini();
 
 function createMealPlanPrompt(weight, height, healthConditions, dailyCalories) {
@@ -191,46 +239,86 @@ function classifyError(error) {
   return 'API_ERROR';
 }
 
-async function generateMealPlanWithAI(weight, height, healthConditions, dailyCalories) {
-  // Check API key first
-  if (!process.env.GEMINI_API_KEY) {
-    throw createUserFriendlyError('NO_API_KEY');
-  }
+// Returns true when the error indicates the *model* is unavailable / overloaded
+// but our API key and quota are fine — so a different model might succeed.
+function isModelUnavailableError(error) {
+  const msg = (error.message || '').toLowerCase();
+  const code = error.status || error.code || error.httpCode;
+  if (code === 503 || code === '503') return true;
+  if (msg.includes('unavailable') || msg.includes('high demand') || msg.includes('overloaded')) return true;
+  if (msg.includes('not found') && msg.includes('model')) return true;
+  if (code === 404 || code === '404') return true;
+  return false;
+}
 
-  // Check initialization
-  if (!isInitialized || !ai) {
-    throw createUserFriendlyError('NOT_INITIALIZED');
-  }
-
-  const maxRetries = 2;
+async function callModelWithRetry(modelName, prompt, retries = 1) {
   let lastError;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const prompt = createMealPlanPrompt(weight, height, healthConditions, dailyCalories);
-      
-      const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-      console.log(`🤖 Calling Gemini API (attempt ${attempt}/${maxRetries})...`);
-      console.log(`   Model: ${modelName}`);
-      console.log(`   User: ${weight}kg, ${height}cm, condition: ${healthConditions?.[0] || 'none'}`);
-      
+      console.log(`   🔄 ${modelName} (attempt ${attempt}/${retries})...`);
+
       const response = await ai.models.generateContent({
         model: modelName,
         contents: prompt,
       });
-      
-      console.log('✅ Gemini API responded');
-      
-      // Get text from response
+
       const text = typeof response.text === 'function' ? response.text() : response.text;
-      
-      if (!text) {
-        throw createUserFriendlyError('INVALID_RESPONSE', 'AI returned empty response');
+      if (!text) throw new Error('Empty response from model');
+      return text;
+    } catch (err) {
+      lastError = err;
+      console.warn(`   ⚠️ ${modelName} attempt ${attempt} failed: ${err.message?.substring(0, 120)}`);
+
+      if (isModelUnavailableError(err)) {
+        markModelUnavailable(modelName);
+        throw err; // break out to try next model
       }
 
-      console.log(`📝 Response length: ${text.length} characters`);
+      // For non-model errors (parse, quota, auth) don't retry with same model
+      const errorType = classifyError(err);
+      if (['NO_API_KEY', 'QUOTA_EXCEEDED'].includes(errorType)) throw err;
+      if (errorType === 'RATE_LIMIT') {
+        // Brief pause then retry on same model once
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 2000 * attempt));
+          continue;
+        }
+        throw err;
+      }
 
-      // Clean the response - remove markdown code blocks if present
+      // Generic/transient error — wait and retry on same model
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
+  }
+  throw lastError;
+}
+
+async function generateMealPlanWithAI(weight, height, healthConditions, dailyCalories) {
+  if (!process.env.GEMINI_API_KEY) {
+    throw createUserFriendlyError('NO_API_KEY');
+  }
+  if (!isInitialized || !ai) {
+    throw createUserFriendlyError('NOT_INITIALIZED');
+  }
+
+  const prompt = createMealPlanPrompt(weight, height, healthConditions, dailyCalories);
+  const modelChain = getAvailableModelChain();
+
+  console.log(`🤖 Generating meal plan — will try up to ${modelChain.length} models`);
+  console.log(`   User: ${weight}kg, ${height}cm, condition: ${healthConditions?.[0] || 'none'}`);
+  console.log(`   Models: ${modelChain.join(' → ')}`);
+
+  let lastError;
+
+  for (const modelName of modelChain) {
+    try {
+      const text = await callModelWithRetry(modelName, prompt);
+
+      console.log(`✅ ${modelName} responded (${text.length} chars)`);
+
+      // Clean markdown fences
       let jsonText = text.trim();
       if (jsonText.startsWith('```json')) {
         jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -238,38 +326,39 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
         jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
 
-      // Parse JSON
       let mealPlanData;
       try {
         mealPlanData = JSON.parse(jsonText);
       } catch (parseError) {
-        console.error('❌ JSON parse error:', parseError.message);
-        console.error('   Raw response (first 500 chars):', jsonText.substring(0, 500));
-        throw createUserFriendlyError('INVALID_RESPONSE', 'AI response was not valid JSON. Please try again.');
+        console.error(`❌ JSON parse error from ${modelName}:`, parseError.message);
+        console.error('   Raw (first 500 chars):', jsonText.substring(0, 500));
+        // Bad JSON from this model — try the next one
+        lastError = createUserFriendlyError('INVALID_RESPONSE', 'AI response was not valid JSON. Trying next model...');
+        continue;
       }
 
       // Validate structure
       if (!mealPlanData.weeklyPlan) {
-        throw createUserFriendlyError('INVALID_RESPONSE', 'AI response missing weeklyPlan structure');
+        lastError = createUserFriendlyError('INVALID_RESPONSE', 'AI response missing weeklyPlan structure');
+        continue;
       }
 
       const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
       const missingDays = days.filter(day => !mealPlanData.weeklyPlan[day]);
-      
       if (missingDays.length > 0) {
-        throw createUserFriendlyError('INVALID_RESPONSE', `AI response missing days: ${missingDays.join(', ')}`);
+        lastError = createUserFriendlyError('INVALID_RESPONSE', `AI response missing days: ${missingDays.join(', ')}`);
+        continue;
       }
 
       const invalidDays = days.filter(day => {
         const d = mealPlanData.weeklyPlan[day];
         return !d?.breakfast || !d?.lunch || !d?.dinner || !Array.isArray(d?.snacks);
       });
-
       if (invalidDays.length > 0) {
-        throw createUserFriendlyError('INVALID_RESPONSE', `AI response has incomplete meals for: ${invalidDays.join(', ')}`);
+        lastError = createUserFriendlyError('INVALID_RESPONSE', `Incomplete meals for: ${invalidDays.join(', ')}`);
+        continue;
       }
 
-      // Validate and normalize grocery list
       let groceryList = [];
       if (Array.isArray(mealPlanData.groceryList)) {
         groceryList = mealPlanData.groceryList
@@ -281,50 +370,38 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
           }));
       }
 
-      console.log('✅ Meal plan validated successfully');
+      console.log(`✅ Meal plan validated (model: ${modelName})`);
       console.log(`📝 Grocery list: ${groceryList.length} items`);
-      
+
       return {
         weeklyPlan: mealPlanData.weeklyPlan,
-        groceryList: groceryList
+        groceryList
       };
 
     } catch (error) {
       lastError = error;
-      
-      // If it's already a user-friendly error, log and maybe rethrow
+
       if (error.errorCode) {
-        console.error(`❌ Error (${error.errorCode}): ${error.userMessage}`);
-        console.error(`   Details: ${error.userDetails}`);
+        console.error(`❌ ${modelName}: ${error.errorCode} — ${error.userDetails || error.message}`);
       } else {
-        console.error(`❌ Error (attempt ${attempt}/${maxRetries}):`, error.message);
+        console.error(`❌ ${modelName}: ${error.message?.substring(0, 200)}`);
       }
-      
-      // Classify the error
+
       const errorType = error.errorCode || classifyError(error);
-      
-      // Don't retry for certain errors
+
+      // Fatal errors — no point trying another model
       if (['NO_API_KEY', 'QUOTA_EXCEEDED', 'NOT_INITIALIZED'].includes(errorType)) {
         throw error.errorCode ? error : createUserFriendlyError(errorType, error.message);
       }
-      
-      // Rate limit - don't retry immediately
-      if (errorType === 'RATE_LIMIT') {
-        throw createUserFriendlyError('RATE_LIMIT');
-      }
-      
-      // Last attempt - throw with user-friendly message
-      if (attempt === maxRetries) {
-        throw error.errorCode ? error : createUserFriendlyError(errorType, error.message);
-      }
-      
-      // Wait before retrying
-      console.log(`⏳ Waiting ${attempt}s before retry...`);
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+
+      // Model-specific failure — continue to next model
+      console.log(`   ↪ Skipping ${modelName}, trying next model...`);
     }
   }
-  
-  throw lastError || createUserFriendlyError('API_ERROR', 'Failed after multiple retries');
+
+  // All models exhausted
+  console.error('❌ All models in the fallback chain failed');
+  throw lastError || createUserFriendlyError('API_ERROR', 'All AI models are currently unavailable. Please try again in a few minutes.');
 }
 
 module.exports = {

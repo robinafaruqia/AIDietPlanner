@@ -2,21 +2,32 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const session = require('express-session');
+const passport = require('passport');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
+const { initializePassport } = require('./config/passport');
+const { optionalAuth } = require('./middleware/auth');
+
 const app = express();
 
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false
 });
 
-// Middleware
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: '200kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -44,12 +55,12 @@ app.use(session({
   }
 }));
 
-// View engine setup
+app.use(passport.initialize());
+initializePassport();
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// MongoDB connection
-// In Docker, use 'mongo' as hostname. Otherwise use 'localhost'
 const isDocker = process.env.DOCKER_ENV === 'true' || process.env.MONGODB_URI?.includes('mongo:');
 const defaultMongoURI = isDocker 
   ? 'mongodb://mongo:27017/ai-diet-planner'
@@ -58,7 +69,7 @@ const defaultMongoURI = isDocker
 const MONGODB_URI = process.env.MONGODB_URI || defaultMongoURI;
 
 mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s
+  serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000
 })
 .then(() => {
@@ -88,32 +99,54 @@ mongoose.connect(MONGODB_URI, {
   }
 });
 
-// Routes
+const authRoutes = require('./routes/auth');
 const mealPlanRoutes = require('./routes/mealPlan');
 const nutritionRoutes = require('./routes/nutrition');
+const weightRoutes = require('./routes/weight');
 const { getAllConditions } = require('./config/healthConditions');
 
 app.use('/api/', apiLimiter);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/meal-plan', mealPlanRoutes);
 app.use('/api/nutrition', nutritionRoutes);
+app.use('/api/weight', weightRoutes);
 
 app.get('/api/health-conditions', (req, res) => {
   res.json({ success: true, conditions: getAllConditions() });
 });
 
-app.get('/', (req, res) => {
-  res.render('index');
+app.get('/', optionalAuth, (req, res) => {
+  res.render('index', { user: req.user || null });
 });
 
-app.get('/plan', (req, res) => {
-  res.render('plan', { healthConditions: getAllConditions() });
+app.get('/login', optionalAuth, (req, res) => {
+  if (req.user) return res.redirect('/');
+  res.render('login', { user: null, error: req.query.error || null });
 });
 
-app.get('/tracking', (req, res) => {
-  res.render('tracking');
+app.get('/register', optionalAuth, (req, res) => {
+  if (req.user) return res.redirect('/');
+  res.render('register', { user: null, error: req.query.error || null });
 });
 
-// Health check endpoint
+app.get('/profile', optionalAuth, (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  res.render('profile', { user: req.user });
+});
+
+app.get('/plan', optionalAuth, (req, res) => {
+  res.render('plan', { user: req.user || null, healthConditions: getAllConditions() });
+});
+
+app.get('/tracking', optionalAuth, (req, res) => {
+  res.render('tracking', { user: req.user || null });
+});
+
+app.get('/weight', optionalAuth, (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  res.render('weight', { user: req.user });
+});
+
 app.get('/api/health', (req, res) => {
   const health = {
     status: 'ok',
@@ -133,7 +166,6 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received. Shutting down gracefully...');
   try {
@@ -145,4 +177,3 @@ process.on('SIGTERM', async () => {
     process.exit(1);
   }
 });
-

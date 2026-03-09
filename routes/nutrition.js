@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const NutritionLog = require('../models/NutritionLog');
+const { optionalAuth } = require('../middleware/auth');
 
 function getDateString(date = new Date()) {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function parseNumber(value, defaultVal = 0) {
@@ -12,7 +16,19 @@ function parseNumber(value, defaultVal = 0) {
   return Number.isFinite(n) && n >= 0 ? n : defaultVal;
 }
 
-// Get nutrition log for a specific date
+function getUserId(req) {
+  return req.user ? req.user._id : null;
+}
+
+function buildQuery(userId, extra = {}) {
+  if (userId) {
+    return { userId, ...extra };
+  }
+  return { userId: { $exists: false }, ...extra };
+}
+
+router.use(optionalAuth);
+
 router.get('/log/:date?', async (req, res) => {
   try {
     const dateString = req.params.date || getDateString();
@@ -35,7 +51,8 @@ router.get('/log/:date?', async (req, res) => {
       });
     }
 
-    const log = await NutritionLog.getOrCreateForDate(dateString);
+    const userId = getUserId(req);
+    const log = await NutritionLog.getOrCreateForDate(userId, dateString);
     res.json({ success: true, log });
   } catch (error) {
     console.error('Error fetching nutrition log:', error);
@@ -43,7 +60,6 @@ router.get('/log/:date?', async (req, res) => {
   }
 });
 
-// Get nutrition history (last N days)
 router.get('/history/:days?', async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.params.days) || 7, 1), 90);
@@ -56,9 +72,12 @@ router.get('/history/:days?', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const logs = await NutritionLog.find({
+    const userId = getUserId(req);
+    const query = buildQuery(userId, {
       date: { $gte: startDate, $lte: endDate }
-    }).sort({ date: -1 });
+    });
+
+    const logs = await NutritionLog.find(query).sort({ date: -1 });
 
     res.json({ success: true, history: logs });
   } catch (error) {
@@ -67,7 +86,6 @@ router.get('/history/:days?', async (req, res) => {
   }
 });
 
-// Add a meal to today's log
 router.post('/log/meal', async (req, res) => {
   try {
     const { date, mealType, name, calories, protein, carbs, fat, fiber } = req.body;
@@ -86,7 +104,8 @@ router.post('/log/meal', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const log = await NutritionLog.getOrCreateForDate(dateString);
+    const userId = getUserId(req);
+    const log = await NutritionLog.getOrCreateForDate(userId, dateString);
     
     log.meals.push({
       mealType,
@@ -107,7 +126,6 @@ router.post('/log/meal', async (req, res) => {
   }
 });
 
-// Log a meal from the meal plan (quick add)
 router.post('/log/from-plan', async (req, res) => {
   try {
     const { date, mealType, meal } = req.body;
@@ -121,7 +139,8 @@ router.post('/log/from-plan', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const log = await NutritionLog.getOrCreateForDate(dateString);
+    const userId = getUserId(req);
+    const log = await NutritionLog.getOrCreateForDate(userId, dateString);
     
     log.meals.push({
       mealType: mealType || 'snack',
@@ -142,7 +161,6 @@ router.post('/log/from-plan', async (req, res) => {
   }
 });
 
-// Remove a meal from a log
 router.delete('/log/meal/:date/:mealId', async (req, res) => {
   try {
     const { date, mealId } = req.params;
@@ -151,7 +169,9 @@ router.delete('/log/meal/:date/:mealId', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const log = await NutritionLog.findOne({ dateString: date });
+    const userId = getUserId(req);
+    const query = buildQuery(userId, { dateString: date });
+    const log = await NutritionLog.findOne(query);
     if (!log) {
       return res.status(404).json({ error: 'Log not found' });
     }
@@ -166,7 +186,6 @@ router.delete('/log/meal/:date/:mealId', async (req, res) => {
   }
 });
 
-// Update daily goals
 router.put('/goals', async (req, res) => {
   try {
     const { date, goals } = req.body;
@@ -176,7 +195,8 @@ router.put('/goals', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const log = await NutritionLog.getOrCreateForDate(dateString);
+    const userId = getUserId(req);
+    const log = await NutritionLog.getOrCreateForDate(userId, dateString);
     
     if (goals) {
       log.goals = {
@@ -196,7 +216,6 @@ router.put('/goals', async (req, res) => {
   }
 });
 
-// Update water intake
 router.put('/water', async (req, res) => {
   try {
     const { date, glasses } = req.body;
@@ -206,7 +225,8 @@ router.put('/water', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const log = await NutritionLog.getOrCreateForDate(dateString);
+    const userId = getUserId(req);
+    const log = await NutritionLog.getOrCreateForDate(userId, dateString);
     log.water = parseNumber(glasses, 0);
     await log.save();
 
@@ -217,7 +237,6 @@ router.put('/water', async (req, res) => {
   }
 });
 
-// Add exercise
 router.post('/log/exercise', async (req, res) => {
   try {
     const { date, name, duration, caloriesBurned, type } = req.body;
@@ -231,7 +250,8 @@ router.post('/log/exercise', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const log = await NutritionLog.getOrCreateForDate(dateString);
+    const userId = getUserId(req);
+    const log = await NutritionLog.getOrCreateForDate(userId, dateString);
     
     log.exercises.push({
       name: name.trim(),
@@ -249,7 +269,6 @@ router.post('/log/exercise', async (req, res) => {
   }
 });
 
-// Remove exercise
 router.delete('/log/exercise/:date/:exerciseId', async (req, res) => {
   try {
     const { date, exerciseId } = req.params;
@@ -258,7 +277,9 @@ router.delete('/log/exercise/:date/:exerciseId', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const log = await NutritionLog.findOne({ dateString: date });
+    const userId = getUserId(req);
+    const query = buildQuery(userId, { dateString: date });
+    const log = await NutritionLog.findOne(query);
     if (!log) {
       return res.status(404).json({ error: 'Log not found' });
     }
@@ -273,7 +294,6 @@ router.delete('/log/exercise/:date/:exerciseId', async (req, res) => {
   }
 });
 
-// Update biometrics
 router.put('/biometrics', async (req, res) => {
   try {
     const { date, weight, bodyFat, waist, notes } = req.body;
@@ -283,7 +303,8 @@ router.put('/biometrics', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const log = await NutritionLog.getOrCreateForDate(dateString);
+    const userId = getUserId(req);
+    const log = await NutritionLog.getOrCreateForDate(userId, dateString);
     
     log.biometrics = {
       weight: weight !== undefined ? parseNumber(weight) : log.biometrics?.weight,
@@ -300,7 +321,6 @@ router.put('/biometrics', async (req, res) => {
   }
 });
 
-// Update mood
 router.put('/mood', async (req, res) => {
   try {
     const { date, mood } = req.body;
@@ -315,7 +335,8 @@ router.put('/mood', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const log = await NutritionLog.getOrCreateForDate(dateString);
+    const userId = getUserId(req);
+    const log = await NutritionLog.getOrCreateForDate(userId, dateString);
     log.mood = mood;
     await log.save();
 
@@ -326,7 +347,6 @@ router.put('/mood', async (req, res) => {
   }
 });
 
-// Get weight history for chart
 router.get('/biometrics/history/:days?', async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.params.days) || 30, 1), 365);
@@ -339,10 +359,13 @@ router.get('/biometrics/history/:days?', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const logs = await NutritionLog.find({
+    const userId = getUserId(req);
+    const query = buildQuery(userId, {
       date: { $gte: startDate, $lte: endDate },
       'biometrics.weight': { $exists: true, $gt: 0 }
-    }).sort({ date: 1 }).select('dateString biometrics');
+    });
+
+    const logs = await NutritionLog.find(query).sort({ date: 1 }).select('dateString biometrics');
 
     const history = logs.map(log => ({
       date: log.dateString,
@@ -358,7 +381,6 @@ router.get('/biometrics/history/:days?', async (req, res) => {
   }
 });
 
-// Calculate goals based on user profile
 router.post('/calculate-goals', (req, res) => {
   try {
     const { weight, height, age, gender, activityLevel, goal } = req.body;
@@ -371,7 +393,6 @@ router.post('/calculate-goals', (req, res) => {
     const h = parseNumber(height);
     const a = parseNumber(age, 30);
     
-    // Mifflin-St Jeor Equation for BMR
     let bmr;
     if (gender === 'female') {
       bmr = (10 * w) + (6.25 * h) - (5 * a) - 161;
@@ -379,7 +400,6 @@ router.post('/calculate-goals', (req, res) => {
       bmr = (10 * w) + (6.25 * h) - (5 * a) + 5;
     }
     
-    // Activity multipliers
     const activityMultipliers = {
       sedentary: 1.2,
       light: 1.375,
@@ -391,16 +411,14 @@ router.post('/calculate-goals', (req, res) => {
     const multiplier = activityMultipliers[activityLevel] || 1.55;
     let tdee = Math.round(bmr * multiplier);
     
-    // Adjust for goal
     if (goal === 'lose') {
-      tdee -= 500; // ~0.5kg/week loss
+      tdee -= 500;
     } else if (goal === 'gain') {
-      tdee += 300; // lean bulk
+      tdee += 300;
     }
     
-    // Calculate macros (balanced approach)
-    const protein = Math.round(w * 1.6); // 1.6g per kg
-    const fat = Math.round((tdee * 0.25) / 9); // 25% from fat
+    const protein = Math.round(w * 1.6);
+    const fat = Math.round((tdee * 0.25) / 9);
     const carbs = Math.round((tdee - (protein * 4) - (fat * 9)) / 4);
     
     const goals = {
@@ -418,29 +436,30 @@ router.post('/calculate-goals', (req, res) => {
   }
 });
 
-// Get streak (consecutive days logged)
 router.get('/streak', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       return res.json({ success: true, streak: 0, message: 'Database not connected' });
     }
 
+    const userId = getUserId(req);
     const today = new Date();
     let streak = 0;
     let checkDate = new Date(today);
     
     while (true) {
-      const dateString = checkDate.toISOString().split('T')[0];
-      const log = await NutritionLog.findOne({ 
+      const dateString = getDateString(checkDate);
+      const query = buildQuery(userId, {
         dateString,
         'meals.0': { $exists: true }
       });
+      const log = await NutritionLog.findOne(query);
       
       if (!log) break;
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
       
-      if (streak > 365) break; // Safety limit
+      if (streak > 365) break;
     }
     
     res.json({ success: true, streak });
@@ -450,7 +469,6 @@ router.get('/streak', async (req, res) => {
   }
 });
 
-// Get weekly summary
 router.get('/summary/weekly', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -461,9 +479,12 @@ router.get('/summary/weekly', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 7);
 
-    const logs = await NutritionLog.find({
+    const userId = getUserId(req);
+    const query = buildQuery(userId, {
       date: { $gte: startDate, $lte: endDate }
     });
+
+    const logs = await NutritionLog.find(query);
 
     if (logs.length === 0) {
       return res.json({ success: true, summary: null });

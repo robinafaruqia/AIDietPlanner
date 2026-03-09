@@ -51,9 +51,58 @@
         .loading {
             display: none;
         }
-        .spinner-border {
-            width: 3rem;
-            height: 3rem;
+        .fitness-loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        .fitness-icons {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .fitness-icon {
+            font-size: 2.5rem;
+            animation: bounce 1s ease-in-out infinite;
+            color: #667eea;
+        }
+        .fitness-icon:nth-child(1) { animation-delay: 0s; color: #ef4444; }
+        .fitness-icon:nth-child(2) { animation-delay: 0.2s; color: #22c55e; }
+        .fitness-icon:nth-child(3) { animation-delay: 0.4s; color: #f59e0b; }
+        .fitness-icon:nth-child(4) { animation-delay: 0.6s; color: #667eea; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        .loading-hint {
+            font-size: 1.1rem;
+            color: #6c757d;
+            text-align: center;
+            min-height: 50px;
+            transition: opacity 0.3s ease;
+        }
+        .loading-hint .hint-icon {
+            font-size: 1.3rem;
+            margin-right: 8px;
+        }
+        .loading-progress {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+        }
+        .loading-progress .progress {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        .loading-progress .progress-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            animation: progressPulse 2s ease-in-out infinite;
+        }
+        @keyframes progressPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         .select2-container--bootstrap-5 .select2-selection {
             min-height: 38px;
@@ -84,29 +133,8 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-heart-pulse"></i> AI Diet Planner
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/plan">Create Plan</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/tracking">Tracking</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <% const activePage = 'plan'; %>
+    <%- include('partials/navbar') %>
 
     <div class="container mt-5">
         <div class="row">
@@ -159,13 +187,32 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-magic"></i> Generate Meal Plan
                             </button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" data-bs-toggle="modal" data-bs-target="#historyModal">
+                                <i class="bi bi-clock-history"></i> View History
+                            </button>
                         </form>
 
-                        <div class="loading text-center mt-4">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                        <div class="loading mt-4">
+                            <div class="fitness-loader">
+                                <div class="fitness-icons">
+                                    <i class="bi bi-heart-pulse fitness-icon"></i>
+                                    <i class="bi bi-droplet fitness-icon"></i>
+                                    <i class="bi bi-egg-fried fitness-icon"></i>
+                                    <i class="bi bi-bicycle fitness-icon"></i>
+                                </div>
+                                <h5 class="text-primary mb-3">
+                                    <i class="bi bi-robot"></i> AI is crafting your meal plan...
+                                </h5>
+                                <div class="loading-hint" id="loadingHint">
+                                    <span class="hint-icon">🏊</span> Swimming through nutritional data...
+                                </div>
+                                <div class="loading-progress">
+                                    <div class="progress">
+                                        <div class="progress-bar" id="loadingProgress" style="width: 10%"></div>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block text-center" id="loadingStep">Step 1 of 5</small>
+                                </div>
                             </div>
-                            <p class="mt-3">Generating your personalized meal plan...</p>
                         </div>
                     </div>
                 </div>
@@ -178,6 +225,7 @@
                     <h3 class="mb-0"><i class="bi bi-check-circle"></i> Your Weekly Meal Plan</h3>
                 </div>
                 <div class="card-body">
+                    <div id="cacheStatus"></div>
                     <div class="alert alert-info">
                         <strong>Daily Calories:</strong> <span id="totalCalories"></span> kcal
                         <br>
@@ -190,11 +238,64 @@
             </div>
 
             <div class="card" id="groceryListCard" style="display: none;">
-                <div class="card-header bg-info text-white">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h3 class="mb-0"><i class="bi bi-cart"></i> Grocery List</h3>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-light btn-sm" id="printGroceryList" title="Print">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                        <button type="button" class="btn btn-light btn-sm" id="downloadGroceryList" title="Download">
+                            <i class="bi bi-download"></i> Download
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div id="groceryList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal fade" id="historyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title"><i class="bi bi-clock-history"></i> Meal Plan History</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="historyLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2">Loading history...</p>
+                    </div>
+                    <div id="historyEmpty" class="text-center py-4" style="display: none;">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No meal plans generated yet.<br>Generate your first meal plan to see it here!</p>
+                    </div>
+                    <div id="historyList" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Weight</th>
+                                        <th>Height</th>
+                                        <th>Health Conditions</th>
+                                        <th>Calories</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div id="historyPagination" class="d-flex justify-content-between align-items-center mt-3">
+                            <small class="text-muted" id="historyCount"></small>
+                            <button class="btn btn-outline-primary btn-sm" id="loadMoreHistory" style="display: none;">
+                                Load More
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -242,6 +343,9 @@
                 $('.loading').show();
                 $('#mealPlanResult').hide();
                 $('#errorAlert').remove();
+                
+                // Start loading animation with hints
+                startLoadingAnimation();
 
                 $.ajax({
                     url: '/api/meal-plan/generate',
@@ -254,14 +358,16 @@
                         includeGroceryList: includeGroceryList
                     }),
                     success: function(response) {
+                        stopLoadingAnimation();
                         $('.loading').hide();
                         if (response.success) {
-                            displayMealPlan(response.mealPlan);
+                            displayMealPlan(response.mealPlan, response.cached);
                         } else {
                             alert('Failed to generate meal plan');
                         }
                     },
                     error: function(xhr) {
+                        stopLoadingAnimation();
                         $('.loading').hide();
                         const response = xhr.responseJSON || {};
                         const errorMsg = response.error || 'Failed to generate meal plan';
@@ -292,7 +398,7 @@
                 return arr.map(v => safeText(v)).filter(Boolean).join(', ');
             }
 
-            function displayMealPlan(mealPlan) {
+            function displayMealPlan(mealPlan, isCached = false) {
                 $('#totalCalories').text(safeNumber(mealPlan.totalCalories));
                 $('#weightDisplay').text(safeNumber(mealPlan.weight || $('#weight').val()));
                 $('#heightDisplay').text(safeNumber(mealPlan.height || $('#height').val()));
@@ -303,6 +409,29 @@
                         ? hc.map(v => String(v)).join(', ')
                         : 'None'
                 );
+                
+                // Show cached badge and regenerate button
+                if (isCached) {
+                    $('#cacheStatus').html(`
+                        <div class="alert alert-info d-flex justify-content-between align-items-center mb-3">
+                            <span>
+                                <i class="bi bi-lightning-charge"></i> 
+                                <strong>Instant Result!</strong> This meal plan was loaded from your saved plans.
+                                ${mealPlan.createdAt ? `<small class="text-muted ms-2">Created: ${new Date(mealPlan.createdAt).toLocaleDateString()}</small>` : ''}
+                            </span>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="regenerateBtn">
+                                <i class="bi bi-arrow-clockwise"></i> Generate New Plan
+                            </button>
+                        </div>
+                    `);
+                } else {
+                    $('#cacheStatus').html(`
+                        <div class="alert alert-success d-flex align-items-center mb-3">
+                            <i class="bi bi-stars me-2"></i>
+                            <span><strong>Fresh from AI!</strong> This meal plan was just created for you.</span>
+                        </div>
+                    `);
+                }
 
                 const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                 const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -331,7 +460,7 @@
                                         <div class="col-md-6">
                                             <div class="meal-card">
                                                 <h6><i class="bi bi-sunrise"></i> Breakfast
-                                                    <button class="btn btn-sm btn-outline-success float-end" onclick="logMeal('${day}_breakfast', 'breakfast')" title="Log this meal">
+                                                    <button class="btn btn-sm btn-outline-success float-end btn-log-meal" data-meal-key="${day}_breakfast" data-meal-type="breakfast" title="Log this meal">
                                                         <i class="bi bi-plus-circle"></i>
                                                     </button>
                                                 </h6>
@@ -343,7 +472,7 @@
                                         <div class="col-md-6">
                                             <div class="meal-card">
                                                 <h6><i class="bi bi-sun"></i> Lunch
-                                                    <button class="btn btn-sm btn-outline-success float-end" onclick="logMeal('${day}_lunch', 'lunch')" title="Log this meal">
+                                                    <button class="btn btn-sm btn-outline-success float-end btn-log-meal" data-meal-key="${day}_lunch" data-meal-type="lunch" title="Log this meal">
                                                         <i class="bi bi-plus-circle"></i>
                                                     </button>
                                                 </h6>
@@ -355,7 +484,7 @@
                                         <div class="col-md-6">
                                             <div class="meal-card">
                                                 <h6><i class="bi bi-moon"></i> Dinner
-                                                    <button class="btn btn-sm btn-outline-success float-end" onclick="logMeal('${day}_dinner', 'dinner')" title="Log this meal">
+                                                    <button class="btn btn-sm btn-outline-success float-end btn-log-meal" data-meal-key="${day}_dinner" data-meal-type="dinner" title="Log this meal">
                                                         <i class="bi bi-plus-circle"></i>
                                                     </button>
                                                 </h6>
@@ -370,7 +499,7 @@
                                                 ${snacks.map((snack, snackIdx) => `
                                                     <div class="mb-2">
                                                         <strong>${safeText(snack?.name)}</strong>
-                                                        <button class="btn btn-sm btn-outline-success float-end" onclick="logMeal('${day}_snack_${snackIdx}', 'snack')" title="Log this snack">
+                                                        <button class="btn btn-sm btn-outline-success float-end btn-log-meal" data-meal-key="${day}_snack_${snackIdx}" data-meal-type="snack" title="Log this snack">
                                                             <i class="bi bi-plus-circle"></i>
                                                         </button>
                                                         <p class="mb-1"><small>${safeJoin(snack?.ingredients)}</small></p>
@@ -503,12 +632,402 @@
                     `);
                     $('body').append(toast);
                     setTimeout(() => toast.remove(), 4000);
+                } else {
+                    alert('Failed to log meal: ' + (response.error || 'Unknown error'));
                 }
             } catch (error) {
+                console.error('Log meal error:', error);
                 const msg = error.responseJSON?.error || 'Failed to log meal';
                 alert(msg);
             }
         }
+
+        // Event delegation for log meal buttons
+        $(document).on('click', '.btn-log-meal', function() {
+            const mealKey = $(this).data('meal-key');
+            const mealType = $(this).data('meal-type');
+            logMeal(mealKey, mealType);
+        });
+
+        // Regenerate meal plan (force new AI generation)
+        $(document).on('click', '#regenerateBtn', function() {
+            const weight = $('#weight').val();
+            const height = $('#height').val();
+            const selectedConditions = $('#healthConditions').val() || [];
+            const customCondition = $('#customCondition').val()?.trim();
+            const includeGroceryList = $('#includeGroceryList').is(':checked');
+            
+            let allConditions = [...selectedConditions];
+            if (customCondition) {
+                allConditions.push(customCondition);
+            }
+
+            $('.loading').show();
+            $('#mealPlanResult').hide();
+            $('#errorAlert').remove();
+            startLoadingAnimation();
+
+            $.ajax({
+                url: '/api/meal-plan/generate',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    weight: parseFloat(weight),
+                    height: parseFloat(height),
+                    healthConditions: allConditions,
+                    includeGroceryList: includeGroceryList,
+                    forceRegenerate: true  // Force new AI generation
+                }),
+                success: function(response) {
+                    stopLoadingAnimation();
+                    $('.loading').hide();
+                    if (response.success) {
+                        displayMealPlan(response.mealPlan, response.cached);
+                    } else {
+                        alert('Failed to generate meal plan');
+                    }
+                },
+                error: function(xhr) {
+                    stopLoadingAnimation();
+                    $('.loading').hide();
+                    const response = xhr.responseJSON || {};
+                    const errorMsg = response.error || 'Failed to generate meal plan';
+                    showError(errorMsg, response.details, response.help, response.code);
+                }
+            });
+        });
+
+        // Print grocery list
+        $('#printGroceryList').click(function() {
+            const groceryContent = document.getElementById('groceryList').innerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Grocery List - AI Diet Planner</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+                    <style>
+                        body { padding: 20px; font-family: Arial, sans-serif; }
+                        h1 { color: #0dcaf0; margin-bottom: 20px; }
+                        .list-group-item { break-inside: avoid; }
+                        @media print {
+                            .no-print { display: none; }
+                            body { padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>🛒 Grocery List</h1>
+                    <p class="text-muted">Generated by AI Diet Planner on ${new Date().toLocaleDateString()}</p>
+                    <hr>
+                    ${groceryContent}
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            window.onafterprint = function() { window.close(); }
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        });
+
+        // Download grocery list as text file
+        $('#downloadGroceryList').click(function() {
+            let textContent = "GROCERY LIST\n";
+            textContent += "Generated by AI Diet Planner on " + new Date().toLocaleDateString() + "\n";
+            textContent += "=".repeat(50) + "\n\n";
+            
+            $('#groceryList h5').each(function() {
+                const category = $(this).text();
+                textContent += category.toUpperCase() + "\n";
+                textContent += "-".repeat(30) + "\n";
+                
+                $(this).next('ul').find('li').each(function() {
+                    const item = $(this).clone().children().remove().end().text().trim();
+                    const qty = $(this).find('.badge').text().trim();
+                    textContent += `  [ ] ${item} - ${qty}\n`;
+                });
+                textContent += "\n";
+            });
+            
+            // Create and download file
+            const blob = new Blob([textContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'grocery-list-' + new Date().toISOString().split('T')[0] + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Loading animation with fitness hints
+        let loadingInterval = null;
+        let progressInterval = null;
+        let currentHintIndex = 0;
+        let currentProgress = 10;
+
+        const loadingHints = [
+            { icon: '🏊', text: 'Swimming through nutritional databases...' },
+            { icon: '🏋️', text: 'Lifting the best protein sources for you...' },
+            { icon: '🚴', text: 'Cycling through healthy carb options...' },
+            { icon: '🧘', text: 'Finding balance in your macros...' },
+            { icon: '🥗', text: 'Mixing fresh ingredients for your salads...' },
+            { icon: '🍳', text: 'Cracking the code on perfect breakfasts...' },
+            { icon: '🥑', text: 'Selecting heart-healthy fats...' },
+            { icon: '💪', text: 'Building your muscle-friendly meals...' },
+            { icon: '🏃', text: 'Running calculations for your calories...' },
+            { icon: '🧠', text: 'AI is thinking about your health goals...' },
+            { icon: '📊', text: 'Analyzing your nutritional requirements...' },
+            { icon: '🌿', text: 'Gathering organic meal ideas...' },
+            { icon: '🍎', text: 'Picking the freshest fruits for you...' },
+            { icon: '🐟', text: 'Fishing for omega-3 rich options...' },
+            { icon: '🥩', text: 'Selecting lean protein sources...' }
+        ];
+
+        const loadingSteps = [
+            { progress: 20, step: 'Step 1 of 5: Analyzing health conditions...' },
+            { progress: 40, step: 'Step 2 of 5: Calculating daily calories...' },
+            { progress: 60, step: 'Step 3 of 5: Crafting breakfast & lunch...' },
+            { progress: 75, step: 'Step 4 of 5: Designing dinner & snacks...' },
+            { progress: 90, step: 'Step 5 of 5: Generating grocery list...' }
+        ];
+
+        function startLoadingAnimation() {
+            currentHintIndex = 0;
+            currentProgress = 10;
+            let stepIndex = 0;
+
+            // Update hints every 2.5 seconds
+            loadingInterval = setInterval(() => {
+                currentHintIndex = (currentHintIndex + 1) % loadingHints.length;
+                const hint = loadingHints[currentHintIndex];
+                $('#loadingHint').html(`<span class="hint-icon">${hint.icon}</span> ${hint.text}`);
+            }, 2500);
+
+            // Update progress every 3 seconds
+            progressInterval = setInterval(() => {
+                if (stepIndex < loadingSteps.length) {
+                    const step = loadingSteps[stepIndex];
+                    $('#loadingProgress').css('width', step.progress + '%');
+                    $('#loadingStep').text(step.step);
+                    stepIndex++;
+                }
+            }, 3000);
+        }
+
+        function stopLoadingAnimation() {
+            if (loadingInterval) {
+                clearInterval(loadingInterval);
+                loadingInterval = null;
+            }
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            // Reset to initial state
+            $('#loadingProgress').css('width', '10%');
+            $('#loadingStep').text('Step 1 of 5');
+            $('#loadingHint').html('<span class="hint-icon">🏊</span> Swimming through nutritional data...');
+        }
+
+        // History functionality
+        let historySkip = 0;
+        const historyLimit = 10;
+
+        // Load history when modal opens
+        $('#historyModal').on('show.bs.modal', function() {
+            historySkip = 0;
+            loadHistory(true);
+        });
+
+        async function loadHistory(reset = false) {
+            if (reset) {
+                historySkip = 0;
+                $('#historyTableBody').empty();
+            }
+
+            try {
+                $('#historyLoading').show();
+                $('#historyList').hide();
+                $('#historyEmpty').hide();
+
+                const response = await $.get(`/api/meal-plan/history/list?limit=${historyLimit}&skip=${historySkip}`);
+                
+                $('#historyLoading').hide();
+
+                if (!response.success) {
+                    $('#historyEmpty').show();
+                    return;
+                }
+
+                if (response.history.length === 0 && historySkip === 0) {
+                    $('#historyEmpty').show();
+                    return;
+                }
+
+                $('#historyList').show();
+
+                response.history.forEach(plan => {
+                    const date = new Date(plan.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    const conditions = plan.healthConditions.length > 0 
+                        ? plan.healthConditions.join(', ') 
+                        : '<span class="text-muted">None</span>';
+
+                    $('#historyTableBody').append(`
+                        <tr>
+                            <td><small>${date}</small></td>
+                            <td>${plan.weight} kg</td>
+                            <td>${plan.height} cm</td>
+                            <td><small>${conditions}</small></td>
+                            <td>${plan.totalCalories || '-'} kcal</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary btn-view-plan" data-plan-id="${plan.id}" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-success btn-use-inputs" 
+                                        data-weight="${plan.weight}" 
+                                        data-height="${plan.height}" 
+                                        data-conditions="${plan.healthConditions.join(',')}"
+                                        title="Use these inputs">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-delete-plan" data-plan-id="${plan.id}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                });
+
+                historySkip += response.history.length;
+                
+                $('#historyCount').text(`Showing ${historySkip} of ${response.pagination.total} meal plans`);
+                
+                if (response.pagination.hasMore) {
+                    $('#loadMoreHistory').show();
+                } else {
+                    $('#loadMoreHistory').hide();
+                }
+            } catch (error) {
+                console.error('Error loading history:', error);
+                $('#historyLoading').hide();
+                $('#historyEmpty').html(`
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2">Failed to load history. Please try again.</p>
+                `).show();
+            }
+        }
+
+        // Load more history
+        $('#loadMoreHistory').click(function() {
+            loadHistory(false);
+        });
+
+        // View a specific meal plan from history
+        $(document).on('click', '.btn-view-plan', async function() {
+            const planId = $(this).data('plan-id');
+            
+            try {
+                const response = await $.get(`/api/meal-plan/${planId}`);
+                
+                if (response.success && response.mealPlan) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('historyModal')).hide();
+                    
+                    // Display the meal plan
+                    displayMealPlan({
+                        id: response.mealPlan._id,
+                        weeklyPlan: response.mealPlan.weeklyPlan,
+                        groceryList: response.mealPlan.groceryList || [],
+                        totalCalories: response.mealPlan.totalCalories,
+                        healthConditions: response.mealPlan.healthConditions,
+                        weight: response.mealPlan.weight,
+                        height: response.mealPlan.height,
+                        createdAt: response.mealPlan.createdAt
+                    }, true); // true = from history/cache
+                    
+                    // Scroll to result
+                    $('html, body').animate({
+                        scrollTop: $('#mealPlanResult').offset().top - 20
+                    }, 500);
+                } else {
+                    alert('Failed to load meal plan');
+                }
+            } catch (error) {
+                console.error('Error loading meal plan:', error);
+                alert('Failed to load meal plan');
+            }
+        });
+
+        // Use inputs from a history item
+        $(document).on('click', '.btn-use-inputs', function() {
+            const weight = $(this).data('weight');
+            const height = $(this).data('height');
+            const conditions = $(this).data('conditions');
+
+            // Fill form
+            $('#weight').val(weight);
+            $('#height').val(height);
+            
+            // Set health conditions in Select2
+            if (conditions) {
+                const condArray = conditions.split(',').filter(c => c.trim());
+                $('#healthConditions').val(condArray).trigger('change');
+            } else {
+                $('#healthConditions').val([]).trigger('change');
+            }
+
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('historyModal')).hide();
+            
+            // Scroll to form
+            $('html, body').animate({
+                scrollTop: $('#mealPlanForm').offset().top - 20
+            }, 500);
+        });
+
+        // Delete a meal plan from history
+        $(document).on('click', '.btn-delete-plan', async function() {
+            if (!confirm('Are you sure you want to delete this meal plan?')) return;
+            
+            const planId = $(this).data('plan-id');
+            const $row = $(this).closest('tr');
+
+            try {
+                const response = await $.ajax({
+                    url: `/api/meal-plan/${planId}`,
+                    method: 'DELETE'
+                });
+
+                if (response.success) {
+                    $row.fadeOut(300, function() {
+                        $(this).remove();
+                        // Reload if table is empty
+                        if ($('#historyTableBody tr').length === 0) {
+                            loadHistory(true);
+                        }
+                    });
+                } else {
+                    alert('Failed to delete meal plan');
+                }
+            } catch (error) {
+                console.error('Error deleting meal plan:', error);
+                alert('Failed to delete meal plan');
+            }
+        });
     </script>
 </body>
 </html>

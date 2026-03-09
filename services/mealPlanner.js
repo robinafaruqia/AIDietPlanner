@@ -10,7 +10,13 @@ let redis = null;
 let redisConnected = false;
 
 function initializeRedis() {
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+  const redisUrl = process.env.REDIS_URL;
+  
+  // Only try Redis if REDIS_URL is explicitly set
+  if (!redisUrl) {
+    console.log('ℹ️ REDIS_URL not set, using in-memory cache');
+    return;
+  }
   
   try {
     redis = new Redis(redisUrl, {

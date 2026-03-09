@@ -37,42 +37,60 @@
             color: #667eea;
             margin-bottom: 20px;
         }
+        .welcome-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-heart-pulse"></i> AI Diet Planner
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/plan">Create Plan</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/tracking">Tracking</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <% const activePage = 'home'; %>
+    <%- include('partials/navbar') %>
 
     <div class="hero-section text-center">
         <div class="container">
+            <% if (typeof user !== 'undefined' && user) { %>
+            <div class="welcome-card mx-auto" style="max-width: 600px;">
+                <h4 class="mb-2">Welcome back, <%= user.name %>!</h4>
+                <% if (user.currentWeight && user.targetWeight) { %>
+                <p class="mb-0 opacity-75">
+                    Current: <%= user.currentWeight %> kg | Target: <%= user.targetWeight %> kg
+                    <% const progress = user.startWeight - user.currentWeight; %>
+                    <% if (progress > 0) { %>
+                    | <span class="text-success">-<%= progress.toFixed(1) %> kg</span>
+                    <% } %>
+                </p>
+                <% } %>
+            </div>
+            <% } %>
+            
             <h1 class="display-4 fw-bold mb-4">
                 <i class="bi bi-heart-pulse"></i> AI Diet Planner
             </h1>
             <p class="lead mb-5">Personalized meal plans tailored to your weight and health conditions</p>
-            <a href="/plan" class="btn btn-primary btn-lg">
-                <i class="bi bi-plus-circle"></i> Get Started
-            </a>
+            
+            <% if (typeof user !== 'undefined' && user) { %>
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="/plan" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle"></i> Create Plan
+                </a>
+                <a href="/weight" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-graph-up"></i> Track Weight
+                </a>
+            </div>
+            <% } else { %>
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="/register" class="btn btn-primary btn-lg">
+                    <i class="bi bi-person-plus"></i> Get Started Free
+                </a>
+                <a href="/plan" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-eye"></i> Try Without Account
+                </a>
+            </div>
+            <% } %>
         </div>
     </div>
 
@@ -102,12 +120,43 @@
             <div class="col-md-3">
                 <div class="card h-100 text-center p-4">
                     <i class="bi bi-graph-up feature-icon"></i>
-                    <h4>Nutrition Tracking</h4>
-                    <p class="text-muted">Track calories, macros, and water intake with progress charts</p>
-                    <a href="/tracking" class="btn btn-outline-primary btn-sm mt-2">Start Tracking</a>
+                    <h4>Weight Tracking</h4>
+                    <p class="text-muted">Track your progress with charts and see your weight history</p>
+                    <% if (typeof user !== 'undefined' && user) { %>
+                    <a href="/weight" class="btn btn-outline-primary btn-sm mt-2">Track Now</a>
+                    <% } else { %>
+                    <a href="/register" class="btn btn-outline-primary btn-sm mt-2">Sign Up</a>
+                    <% } %>
                 </div>
             </div>
         </div>
+        
+        <% if (!(typeof user !== 'undefined' && user)) { %>
+        <div class="row mt-5">
+            <div class="col-md-8 mx-auto">
+                <div class="card p-4 text-center">
+                    <h3 class="mb-3">Why Create an Account?</h3>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <i class="bi bi-save text-primary" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">Save your meal plans</p>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="bi bi-graph-up-arrow text-success" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">Track weight progress</p>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="bi bi-clock-history text-warning" style="font-size: 2rem;"></i>
+                            <p class="mb-0 mt-2">View your history</p>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <a href="/register" class="btn btn-primary">Create Free Account</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% } %>
     </div>
 
     <footer class="bg-dark text-white text-center py-4 mt-5">
@@ -119,4 +168,3 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

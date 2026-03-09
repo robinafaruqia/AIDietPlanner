@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:clean": "bash -c 'lsof -ti tcp:3000 | xargs kill -9 2>/dev/null || true; node server.js'",
     "dev": "nodemon server.js",
     "verify": "node verify-setup.js",
     "logs": "docker compose logs -f",
@@ -31,7 +32,10 @@
     "express-rate-limit": "^7.1.5",
     "express-session": "^1.17.3",
     "ioredis": "^5.4.1",
-    "mongoose": "^7.5.0"
+    "mongoose": "^7.5.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-local": "^1.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

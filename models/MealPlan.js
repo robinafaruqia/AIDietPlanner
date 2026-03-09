@@ -49,6 +49,28 @@ const mealPlanSchema = new mongoose.Schema({
 // Add indexes for better query performance
 mealPlanSchema.index({ userId: 1, createdAt: -1 });
 mealPlanSchema.index({ createdAt: -1 });
+// Index for caching lookups (weight + height + healthConditions)
+mealPlanSchema.index({ weight: 1, height: 1, healthConditions: 1, createdAt: -1 });
+
+mealPlanSchema.statics.findCached = async function(weight, height, healthConditions, userId = null, maxAgeDays = 7) {
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() - maxAgeDays);
+  
+  const sortedConditions = [...healthConditions].sort();
+  
+  const query = {
+    weight: weight,
+    height: height,
+    healthConditions: { $size: sortedConditions.length, $all: sortedConditions },
+    createdAt: { $gte: minDate }
+  };
+  
+  if (userId) {
+    query.userId = userId;
+  }
+  
+  return this.findOne(query).sort({ createdAt: -1 });
+};
 
 module.exports = mongoose.model('MealPlan', mealPlanSchema);
 
