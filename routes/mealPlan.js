@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const MealPlan = require('../models/MealPlan');
+const User = require('../models/User');
 const { generateWeeklyMealPlan, calculateDailyCalories } = require('../services/mealPlanner');
 const { regenerateSingleDay, swapMeal } = require('../services/aiMealGenerator');
 const { optionalAuth } = require('../middleware/auth');
+const { checkAndUnlockAchievements } = require('./achievements');
 
 function parseFiniteNumber(value) {
   const n = typeof value === 'number' ? value : Number(value);
@@ -127,6 +129,16 @@ router.post('/generate', async (req, res) => {
 
     const savedId = await saveMealPlanToDatabase(parsedWeight, parsedHeight, conditions, mealPlanData, userId);
 
+    let newAchievements = [];
+    if (userId && mongoose.connection.readyState === 1) {
+      try {
+        await User.findByIdAndUpdate(userId, { $inc: { mealPlansGenerated: 1 } });
+        newAchievements = await checkAndUnlockAchievements(userId, 'meal_plan_generated');
+      } catch (err) {
+        console.warn('Failed to update meal plan count:', err.message);
+      }
+    }
+
     const responseData = {
       success: true,
       cached: false,
@@ -138,7 +150,8 @@ router.post('/generate', async (req, res) => {
         healthConditions: conditions,
         weight: parsedWeight,
         height: parsedHeight
-      }
+      },
+      newAchievements
     };
 
     res.json(responseData);

@@ -172,16 +172,210 @@
             transform: scale(1.1);
         }
         
-        /* Streak Badge */
+        /* Streak Badge - Enhanced */
         .streak-badge {
-            background: linear-gradient(135deg, #f59e0b, #ef4444);
             color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 10px 18px;
+            border-radius: 24px;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             font-weight: 600;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .streak-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+        
+        /* Streak Badge Tiers */
+        .streak-badge.streak-starting {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+        .streak-badge.streak-bronze {
+            background: linear-gradient(135deg, #cd7f32, #a0522d);
+        }
+        .streak-badge.streak-silver {
+            background: linear-gradient(135deg, #c0c0c0, #a8a8a8);
+            color: #333;
+        }
+        .streak-badge.streak-gold {
+            background: linear-gradient(135deg, #ffd700, #ffb347);
+            color: #333;
+        }
+        .streak-badge.streak-platinum {
+            background: linear-gradient(135deg, #e5e4e2, #a0b2c6);
+            color: #333;
+        }
+        .streak-badge.streak-diamond {
+            background: linear-gradient(135deg, #b9f2ff, #89cff0);
+            color: #333;
+        }
+        .streak-badge.streak-legendary {
+            background: linear-gradient(135deg, #ff6b35, #f72585, #7209b7);
+            background-size: 200% 200%;
+            animation: legendaryGradient 3s ease infinite;
+        }
+        
+        @keyframes legendaryGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Flame Animation */
+        .streak-flame {
+            display: inline-block;
+            font-size: 1.2rem;
+            animation: flameFlicker 0.5s ease-in-out infinite alternate;
+        }
+        .streak-badge.streak-legendary .streak-flame {
+            animation: flameFlicker 0.3s ease-in-out infinite alternate, flamePulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes flameFlicker {
+            0% { transform: scale(1) rotate(-3deg); }
+            100% { transform: scale(1.1) rotate(3deg); }
+        }
+        
+        @keyframes flamePulse {
+            0%, 100% { filter: drop-shadow(0 0 3px #ff6b35); }
+            50% { filter: drop-shadow(0 0 8px #ff6b35) drop-shadow(0 0 15px #f72585); }
+        }
+        
+        /* Streak Glow Effects */
+        .streak-badge.streak-gold {
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        }
+        .streak-badge.streak-platinum {
+            box-shadow: 0 4px 15px rgba(160, 178, 198, 0.5);
+        }
+        .streak-badge.streak-diamond {
+            box-shadow: 0 4px 15px rgba(137, 207, 240, 0.6);
+            animation: diamondShimmer 2s ease-in-out infinite;
+        }
+        .streak-badge.streak-legendary {
+            box-shadow: 0 4px 20px rgba(247, 37, 133, 0.5);
+            animation: legendaryGradient 3s ease infinite, legendaryPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes diamondShimmer {
+            0%, 100% { box-shadow: 0 4px 15px rgba(137, 207, 240, 0.6); }
+            50% { box-shadow: 0 6px 25px rgba(137, 207, 240, 0.8), 0 0 30px rgba(185, 242, 255, 0.4); }
+        }
+        
+        @keyframes legendaryPulse {
+            0%, 100% { box-shadow: 0 4px 20px rgba(247, 37, 133, 0.5); }
+            50% { box-shadow: 0 6px 30px rgba(247, 37, 133, 0.7), 0 0 40px rgba(114, 9, 183, 0.5); }
+        }
+        
+        /* Milestone Icon */
+        .streak-milestone-icon {
+            font-size: 1rem;
+            margin-left: 4px;
+        }
+        
+        /* Streak Tooltip */
+        .streak-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: normal;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            margin-bottom: 8px;
+            z-index: 100;
+        }
+        .streak-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(0,0,0,0.9);
+        }
+        .streak-badge:hover .streak-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Celebration Toast */
+        .celebration-toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px 50px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            z-index: 9999;
+            opacity: 0;
+            animation: celebrationAppear 0.5s ease forwards;
+        }
+        .celebration-toast.hiding {
+            animation: celebrationDisappear 0.5s ease forwards;
+        }
+        
+        @keyframes celebrationAppear {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        @keyframes celebrationDisappear {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+        
+        .celebration-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            animation: celebrationBounce 0.6s ease infinite;
+        }
+        
+        @keyframes celebrationBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .celebration-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .celebration-message {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            top: -10px;
+            z-index: 9998;
+            animation: confettiFall 3s ease-out forwards;
+        }
+        
+        @keyframes confettiFall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
         }
         
         /* Mood Selector */
@@ -287,6 +481,304 @@
         .nutriscore-c { background: #fecb02; color: #333; }
         .nutriscore-d { background: #ee8100; color: white; }
         .nutriscore-e { background: #e63e11; color: white; }
+        
+        /* Exercise Library Styles */
+        .exercise-card {
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .exercise-card:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        .exercise-card.selected {
+            border-color: #667eea;
+            background: #f0f0ff;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+        .exercise-card .exercise-info {
+            flex: 1;
+        }
+        .exercise-card .exercise-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        .exercise-card .exercise-meta {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        .exercise-card .cal-indicator {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .duration-btn.active {
+            background: var(--primary-gradient);
+            border-color: #667eea;
+            color: white;
+        }
+        #exerciseCategoriesAccordion .accordion-button {
+            padding: 12px 16px;
+            font-weight: 500;
+        }
+        #exerciseCategoriesAccordion .accordion-button:not(.collapsed) {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            color: #667eea;
+        }
+        #exerciseCategoriesAccordion .accordion-body {
+            padding: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        #selectedExercisePanel {
+            border: 2px solid #667eea;
+        }
+        #calorieCalculation {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(59, 130, 246, 0.1));
+            border: none;
+        }
+        
+        /* Fasting Timer Styles */
+        .fasting-card {
+            background: linear-gradient(135deg, #1e1e2e, #2d2d44);
+            border-radius: 16px;
+            color: white;
+            overflow: hidden;
+        }
+        .fasting-card .card-header {
+            background: transparent;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .fasting-timer-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            margin: 0 auto;
+        }
+        .fasting-timer-ring {
+            transform: rotate(-90deg);
+        }
+        .fasting-timer-bg {
+            fill: none;
+            stroke: rgba(255,255,255,0.1);
+            stroke-width: 10;
+        }
+        .fasting-timer-progress {
+            fill: none;
+            stroke-width: 10;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease, stroke 0.3s ease;
+        }
+        .fasting-timer-progress.fasting {
+            stroke: #a855f7;
+        }
+        .fasting-timer-progress.eating {
+            stroke: #22c55e;
+        }
+        .fasting-timer-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .fasting-timer-status {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+        .fasting-timer-time {
+            font-size: 2rem;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+        .fasting-timer-label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+        .fasting-status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .fasting-status-badge.fasting {
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+        }
+        .fasting-status-badge.eating {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+        .fasting-window-info {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .fasting-window-info .label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+        .fasting-window-info .value {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .fasting-stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .fasting-stat {
+            text-align: center;
+        }
+        .fasting-stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .fasting-stat-label {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+        }
+        .fasting-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+        .fasting-schedule-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .fasting-schedule-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .fasting-schedule-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .fasting-schedule-btn.active {
+            background: #a855f7;
+            border-color: #a855f7;
+        }
+        .fasting-action-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .fasting-action-btn.start-fast {
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            color: white;
+        }
+        .fasting-action-btn.start-fast:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+        }
+        .fasting-action-btn.break-fast {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+        .fasting-action-btn.break-fast:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+        }
+        .fasting-disabled-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            z-index: 10;
+        }
+        .pulse-animation {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .form-check-input:checked {
+            background-color: #a855f7;
+            border-color: #a855f7;
+        }
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .achievement-toast {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            animation: slideIn 0.5s ease, fadeOut 0.5s ease 4.5s forwards;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            max-width: 320px;
+        }
+        .achievement-toast .toast-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        .achievement-toast .toast-content h6 {
+            margin: 0;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .achievement-toast .toast-content p {
+            margin: 0;
+            font-weight: 600;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -334,8 +826,11 @@
                 <div class="card">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <span><i class="bi bi-pie-chart-fill text-primary"></i> Nutrition Summary</span>
-                        <span class="streak-badge" id="streakBadge" style="display:none;">
-                            <i class="bi bi-fire"></i> <span id="streakCount">0</span> day streak
+                        <span class="streak-badge streak-starting" id="streakBadge" style="display:none;">
+                            <span class="streak-tooltip" id="streakTooltip">Keep going!</span>
+                            <span class="streak-flame" id="streakFlame">🔥</span>
+                            <span><span id="streakCount">0</span> day streak</span>
+                            <span class="streak-milestone-icon" id="streakMilestoneIcon"></span>
                         </span>
                     </div>
                     <div class="card-body">
@@ -435,6 +930,106 @@
 
             <!-- Right Column - Sidebar -->
             <div class="col-lg-4">
+                <!-- Intermittent Fasting Tracker -->
+                <div class="card fasting-card" id="fastingTrackerCard" style="position: relative;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-clock-history"></i> Fasting Tracker</span>
+                        <span class="fasting-status-badge fasting" id="fastingStatusBadge">Fasting</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Fasting Toggle -->
+                        <div class="fasting-toggle mb-3">
+                            <span>Enable Fasting</span>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="fastingEnabledToggle" style="width: 3em; height: 1.5em;">
+                            </div>
+                        </div>
+
+                        <!-- Schedule Selector -->
+                        <div class="mb-3" id="fastingScheduleSection">
+                            <small class="d-block mb-2 opacity-75">Fasting Schedule</small>
+                            <div class="fasting-schedule-selector">
+                                <button class="fasting-schedule-btn active" data-schedule="16:8">16:8</button>
+                                <button class="fasting-schedule-btn" data-schedule="18:6">18:6</button>
+                                <button class="fasting-schedule-btn" data-schedule="20:4">20:4</button>
+                                <button class="fasting-schedule-btn" data-schedule="custom">Custom</button>
+                            </div>
+                        </div>
+
+                        <!-- Custom Time Inputs (hidden by default) -->
+                        <div class="row mb-3" id="customTimeInputs" style="display: none;">
+                            <div class="col-6">
+                                <label class="form-label small opacity-75">Eating Start</label>
+                                <input type="time" class="form-control form-control-sm bg-dark text-white border-secondary" id="eatingWindowStart" value="12:00">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small opacity-75">Eating End</label>
+                                <input type="time" class="form-control form-control-sm bg-dark text-white border-secondary" id="eatingWindowEnd" value="20:00">
+                            </div>
+                        </div>
+
+                        <!-- Timer Display -->
+                        <div class="fasting-timer-container my-4">
+                            <svg class="fasting-timer-ring" width="180" height="180">
+                                <circle class="fasting-timer-bg" cx="90" cy="90" r="80"></circle>
+                                <circle class="fasting-timer-progress fasting" id="fastingTimerProgress" cx="90" cy="90" r="80" 
+                                        stroke-dasharray="502.65" stroke-dashoffset="502.65"></circle>
+                            </svg>
+                            <div class="fasting-timer-center">
+                                <div class="fasting-timer-status" id="fastingTimerStatus">Fasting</div>
+                                <div class="fasting-timer-time pulse-animation" id="fastingTimerTime">--:--</div>
+                                <div class="fasting-timer-label" id="fastingTimerLabel">remaining</div>
+                            </div>
+                        </div>
+
+                        <!-- Window Info -->
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="fasting-window-info text-center">
+                                    <div class="label">Eating Window</div>
+                                    <div class="value" id="eatingWindowDisplay">12:00 - 20:00</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="fasting-window-info text-center">
+                                    <div class="label">Next Window</div>
+                                    <div class="value" id="nextWindowDisplay">--:--</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button class="fasting-action-btn start-fast" id="fastingActionBtn">
+                            <i class="bi bi-play-fill me-2"></i>Start Fast
+                        </button>
+
+                        <!-- Weekly Stats -->
+                        <div class="fasting-stats mt-3">
+                            <div class="fasting-stat">
+                                <div class="fasting-stat-value" id="fastingStreakValue">0</div>
+                                <div class="fasting-stat-label">Streak</div>
+                            </div>
+                            <div class="fasting-stat">
+                                <div class="fasting-stat-value" id="fastingCompletedValue">0</div>
+                                <div class="fasting-stat-label">Completed</div>
+                            </div>
+                            <div class="fasting-stat">
+                                <div class="fasting-stat-value" id="fastingRateValue">0%</div>
+                                <div class="fasting-stat-label">Success</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Disabled Overlay (shown when fasting is disabled) -->
+                    <div class="fasting-disabled-overlay" id="fastingDisabledOverlay">
+                        <div class="text-center p-3">
+                            <i class="bi bi-clock-history fs-1 mb-2 d-block opacity-50"></i>
+                            <p class="mb-2">Fasting tracking is disabled</p>
+                            <button class="btn btn-sm btn-outline-light" id="enableFastingBtn">Enable Fasting</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Water Intake -->
                 <div class="card">
                     <div class="card-header bg-white">
@@ -623,34 +1218,118 @@
 
     <!-- Add Exercise Modal -->
     <div class="modal fade" id="addExerciseModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-lightning-charge"></i> Log Exercise</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Exercise Name</label>
-                        <input type="text" class="form-control" id="exerciseName" placeholder="e.g., Running, Weight Training">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Type</label>
-                        <select class="form-select" id="exerciseType">
-                            <option value="cardio">Cardio</option>
-                            <option value="strength">Strength</option>
-                            <option value="flexibility">Flexibility/Yoga</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <label class="form-label">Duration (min)</label>
-                            <input type="number" class="form-control" id="exerciseDuration" placeholder="30" min="0">
+                    <!-- Tabs for Library vs Custom -->
+                    <ul class="nav nav-tabs mb-3" id="exerciseModalTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="library-tab" data-bs-toggle="tab" data-bs-target="#libraryPane" type="button" role="tab">
+                                <i class="bi bi-collection"></i> Library
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#customPane" type="button" role="tab">
+                                <i class="bi bi-pencil"></i> Custom
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content">
+                        <!-- Library Tab -->
+                        <div class="tab-pane fade show active" id="libraryPane" role="tabpanel">
+                            <!-- Search -->
+                            <div class="mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="exerciseSearch" placeholder="Search exercises...">
+                                </div>
+                            </div>
+                            
+                            <!-- Search Results (hidden by default) -->
+                            <div id="exerciseSearchResults" class="mb-3" style="display: none;">
+                                <h6 class="text-muted mb-2">Search Results</h6>
+                                <div id="searchResultsList"></div>
+                            </div>
+                            
+                            <!-- Exercise Categories Accordion -->
+                            <div class="accordion" id="exerciseCategoriesAccordion">
+                                <!-- Categories will be populated by JS -->
+                            </div>
+                            
+                            <!-- Selected Exercise Panel -->
+                            <div id="selectedExercisePanel" class="mt-3 p-3 bg-light rounded" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="mb-1" id="selectedExerciseName">Running</h6>
+                                        <small class="text-muted" id="selectedExerciseCategory">Cardio</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-secondary" id="clearSelectedExercise">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Weight Input -->
+                                <div class="mb-3">
+                                    <label class="form-label">Your Weight (kg)</label>
+                                    <input type="number" class="form-control" id="libraryExerciseWeight" placeholder="70" step="0.1">
+                                    <small class="text-muted">Used to calculate calories burned</small>
+                                </div>
+                                
+                                <!-- Duration with Quick Buttons -->
+                                <div class="mb-3">
+                                    <label class="form-label">Duration</label>
+                                    <div class="btn-group w-100 mb-2" role="group">
+                                        <button type="button" class="btn btn-outline-primary duration-btn" data-duration="15">15 min</button>
+                                        <button type="button" class="btn btn-outline-primary duration-btn" data-duration="30">30 min</button>
+                                        <button type="button" class="btn btn-outline-primary duration-btn" data-duration="45">45 min</button>
+                                        <button type="button" class="btn btn-outline-primary duration-btn" data-duration="60">60 min</button>
+                                    </div>
+                                    <input type="number" class="form-control" id="libraryExerciseDuration" placeholder="30" min="1">
+                                </div>
+                                
+                                <!-- Calorie Calculation Display -->
+                                <div class="alert alert-info mb-0" id="calorieCalculation">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span><i class="bi bi-fire"></i> Estimated Calories:</span>
+                                        <strong class="fs-4" id="calculatedCalories">0</strong>
+                                    </div>
+                                    <small class="text-muted" id="calorieCalculationDetail">for 30 minutes</small>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-6 mb-3">
-                            <label class="form-label">Calories Burned</label>
-                            <input type="number" class="form-control" id="exerciseCalories" placeholder="200" min="0">
+                        
+                        <!-- Custom Tab -->
+                        <div class="tab-pane fade" id="customPane" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label">Exercise Name</label>
+                                <input type="text" class="form-control" id="exerciseName" placeholder="e.g., Running, Weight Training">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Type</label>
+                                <select class="form-select" id="exerciseType">
+                                    <option value="cardio">Cardio</option>
+                                    <option value="strength">Strength</option>
+                                    <option value="flexibility">Flexibility/Yoga</option>
+                                    <option value="sports">Sports</option>
+                                    <option value="daily">Daily Activities</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label">Duration (min)</label>
+                                    <input type="number" class="form-control" id="exerciseDuration" placeholder="30" min="0">
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label">Calories Burned</label>
+                                    <input type="number" class="form-control" id="exerciseCalories" placeholder="200" min="0">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1241,6 +1920,10 @@
                     $('#addMealForm')[0].reset();
                     await loadDayData();
                     loadWeeklyChart();
+                    
+                    if (response.newAchievements && response.newAchievements.length > 0) {
+                        response.newAchievements.forEach(a => showAchievementToast(a));
+                    }
                 } else {
                     alert('Failed to add food: ' + (response.error || 'Unknown error'));
                 }
@@ -1522,12 +2205,131 @@
             }
         }
 
+        const STREAK_MILESTONES = [
+            { days: 3, icon: '🌱', name: 'Seedling', message: 'You\'re building a habit!' },
+            { days: 7, icon: '🔥', name: 'On Fire', message: 'One week strong!' },
+            { days: 14, icon: '⚡', name: 'Energized', message: 'Two weeks of dedication!' },
+            { days: 30, icon: '⭐', name: 'Star', message: 'A full month! Amazing!' },
+            { days: 60, icon: '🏆', name: 'Champion', message: 'Two months of consistency!' },
+            { days: 90, icon: '💎', name: 'Diamond', message: 'Legendary 90-day streak!' },
+            { days: 365, icon: '👑', name: 'Crown', message: 'A FULL YEAR! You\'re incredible!' }
+        ];
+
+        function getStreakTier(streak) {
+            if (streak >= 90) return 'legendary';
+            if (streak >= 60) return 'diamond';
+            if (streak >= 30) return 'platinum';
+            if (streak >= 14) return 'gold';
+            if (streak >= 7) return 'silver';
+            if (streak >= 3) return 'bronze';
+            return 'starting';
+        }
+
+        function getCurrentMilestone(streak) {
+            let current = null;
+            for (const milestone of STREAK_MILESTONES) {
+                if (streak >= milestone.days) {
+                    current = milestone;
+                }
+            }
+            return current;
+        }
+
+        function getNextMilestone(streak) {
+            for (const milestone of STREAK_MILESTONES) {
+                if (streak < milestone.days) {
+                    return milestone;
+                }
+            }
+            return null;
+        }
+
+        function showCelebration(milestone, streak) {
+            const celebrationHtml = `
+                <div class="celebration-toast" id="celebrationToast">
+                    <div class="celebration-icon">${milestone.icon}</div>
+                    <div class="celebration-title">${milestone.name} Achievement!</div>
+                    <div class="celebration-message">${streak} day streak - ${milestone.message}</div>
+                </div>
+            `;
+            
+            $('body').append(celebrationHtml);
+            
+            const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#9b59b6', '#e91e63'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = $('<div class="confetti"></div>');
+                confetti.css({
+                    left: Math.random() * 100 + 'vw',
+                    background: colors[Math.floor(Math.random() * colors.length)],
+                    animationDelay: Math.random() * 0.5 + 's',
+                    animationDuration: (Math.random() * 2 + 2) + 's'
+                });
+                $('body').append(confetti);
+            }
+            
+            setTimeout(() => {
+                $('#celebrationToast').addClass('hiding');
+                setTimeout(() => {
+                    $('#celebrationToast').remove();
+                    $('.confetti').remove();
+                }, 500);
+            }, 3500);
+        }
+
+        function checkAndCelebrateMilestone(streak) {
+            const lastCelebrated = parseInt(localStorage.getItem('lastCelebratedStreak') || '0');
+            
+            for (const milestone of STREAK_MILESTONES) {
+                if (streak >= milestone.days && lastCelebrated < milestone.days) {
+                    localStorage.setItem('lastCelebratedStreak', milestone.days.toString());
+                    showCelebration(milestone, streak);
+                    break;
+                }
+            }
+            
+            if (streak === 0) {
+                localStorage.setItem('lastCelebratedStreak', '0');
+            }
+        }
+
         async function loadStreak() {
             try {
                 const response = await $.get('/api/nutrition/streak');
                 if (response.success && response.streak > 0) {
-                    $('#streakCount').text(response.streak);
-                    $('#streakBadge').show();
+                    const streak = response.streak;
+                    const tier = getStreakTier(streak);
+                    const currentMilestone = getCurrentMilestone(streak);
+                    const nextMilestone = getNextMilestone(streak);
+                    
+                    $('#streakCount').text(streak);
+                    
+                    $('#streakBadge')
+                        .removeClass('streak-starting streak-bronze streak-silver streak-gold streak-platinum streak-diamond streak-legendary')
+                        .addClass(`streak-${tier}`)
+                        .show();
+                    
+                    if (currentMilestone) {
+                        $('#streakMilestoneIcon').text(currentMilestone.icon).show();
+                    } else {
+                        $('#streakMilestoneIcon').hide();
+                    }
+                    
+                    if (nextMilestone) {
+                        const daysUntil = nextMilestone.days - streak;
+                        $('#streakTooltip').html(`
+                            ${currentMilestone ? currentMilestone.name + ' tier' : 'Getting started!'}<br>
+                            <strong>${daysUntil} day${daysUntil !== 1 ? 's' : ''}</strong> until ${nextMilestone.icon} ${nextMilestone.name}
+                        `);
+                    } else {
+                        $('#streakTooltip').html(`
+                            ${currentMilestone.icon} ${currentMilestone.name} - Maximum tier!<br>
+                            You're a legend! Keep it going!
+                        `);
+                    }
+                    
+                    checkAndCelebrateMilestone(streak);
+                } else {
+                    $('#streakBadge').hide();
                 }
             } catch (error) {
                 console.error('Error loading streak:', error);
@@ -1744,6 +2546,30 @@
             `);
             $('body').append(toast);
             setTimeout(() => toast.remove(), 3000);
+        }
+
+        function showAchievementToast(achievement) {
+            const toast = $(`
+                <div class="achievement-toast">
+                    <div class="toast-icon">
+                        <i class="bi ${achievement.icon || 'bi-trophy'}"></i>
+                    </div>
+                    <div class="toast-content">
+                        <h6>Achievement Unlocked!</h6>
+                        <p>${escapeHtml(achievement.name)}</p>
+                    </div>
+                </div>
+            `);
+            
+            if (!$('.toast-container').length) {
+                $('body').append('<div class="toast-container"></div>');
+            }
+            
+            $('.toast-container').append(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
         }
 
         // Event handlers for favorites
@@ -1974,13 +2800,491 @@
             addScannedProductToMealForm();
         });
 
+        // Exercise Library functionality
+        let exerciseLibrary = null;
+        let selectedLibraryExercise = null;
+        const userWeight = <%= user && user.currentWeight ? user.currentWeight : 70 %>;
+
+        async function loadExerciseLibrary() {
+            try {
+                const response = await $.get('/api/exercise-library');
+                if (response.success) {
+                    exerciseLibrary = response.exercises;
+                    renderExerciseCategories();
+                }
+            } catch (error) {
+                console.error('Error loading exercise library:', error);
+            }
+        }
+
+        function renderExerciseCategories() {
+            if (!exerciseLibrary) return;
+
+            let html = '';
+            let index = 0;
+            
+            for (const [key, category] of Object.entries(exerciseLibrary)) {
+                const isFirst = index === 0;
+                html += `
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button ${isFirst ? '' : 'collapsed'}" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#collapse-${key}">
+                                <i class="bi ${category.icon} me-2"></i> ${category.name}
+                                <span class="badge bg-secondary ms-2">${category.exercises.length}</span>
+                            </button>
+                        </h2>
+                        <div id="collapse-${key}" class="accordion-collapse collapse ${isFirst ? 'show' : ''}" 
+                             data-bs-parent="#exerciseCategoriesAccordion">
+                            <div class="accordion-body">
+                                ${category.exercises.map(ex => renderExerciseCard(ex, key)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                index++;
+            }
+            
+            $('#exerciseCategoriesAccordion').html(html);
+        }
+
+        function renderExerciseCard(exercise, categoryKey) {
+            const calPerMin70kg = Math.round(exercise.calPerMinPerKg * 70);
+            return `
+                <div class="exercise-card" data-exercise-id="${exercise.id}" data-category="${categoryKey}">
+                    <div class="exercise-info">
+                        <div class="exercise-name">${escapeHtml(exercise.name)}</div>
+                        <div class="exercise-meta">~${calPerMin70kg} cal/min (70kg)</div>
+                    </div>
+                    <span class="cal-indicator">${exercise.calPerMinPerKg.toFixed(2)} cal/min/kg</span>
+                </div>
+            `;
+        }
+
+        function selectLibraryExercise(exerciseId, categoryKey) {
+            const category = exerciseLibrary[categoryKey];
+            if (!category) return;
+            
+            const exercise = category.exercises.find(e => e.id === exerciseId);
+            if (!exercise) return;
+            
+            selectedLibraryExercise = {
+                ...exercise,
+                category: category.name,
+                categoryKey
+            };
+            
+            $('.exercise-card').removeClass('selected');
+            $(`.exercise-card[data-exercise-id="${exerciseId}"]`).addClass('selected');
+            
+            $('#selectedExerciseName').text(exercise.name);
+            $('#selectedExerciseCategory').text(category.name);
+            $('#libraryExerciseWeight').val(userWeight);
+            $('#libraryExerciseDuration').val(30);
+            $('.duration-btn').removeClass('active');
+            $('.duration-btn[data-duration="30"]').addClass('active');
+            
+            $('#selectedExercisePanel').slideDown(200);
+            updateCalorieCalculation();
+        }
+
+        function clearSelectedExercise() {
+            selectedLibraryExercise = null;
+            $('.exercise-card').removeClass('selected');
+            $('#selectedExercisePanel').slideUp(200);
+        }
+
+        function updateCalorieCalculation() {
+            if (!selectedLibraryExercise) return;
+            
+            const duration = parseInt($('#libraryExerciseDuration').val()) || 30;
+            const weight = parseFloat($('#libraryExerciseWeight').val()) || userWeight;
+            
+            const calories = Math.round(selectedLibraryExercise.calPerMinPerKg * duration * weight);
+            
+            $('#calculatedCalories').text(calories);
+            $('#calorieCalculationDetail').text(`for ${duration} minutes at ${weight}kg`);
+        }
+
+        async function searchExercises(query) {
+            if (!query || query.trim().length < 2) {
+                $('#exerciseSearchResults').hide();
+                $('#exerciseCategoriesAccordion').show();
+                return;
+            }
+            
+            try {
+                const response = await $.get('/api/exercise-library/search', { q: query });
+                if (response.success) {
+                    if (response.results.length === 0) {
+                        $('#searchResultsList').html('<p class="text-muted">No exercises found</p>');
+                    } else {
+                        const html = response.results.map(ex => renderExerciseCard(ex, ex.categoryKey)).join('');
+                        $('#searchResultsList').html(html);
+                    }
+                    $('#exerciseSearchResults').show();
+                    $('#exerciseCategoriesAccordion').hide();
+                }
+            } catch (error) {
+                console.error('Error searching exercises:', error);
+            }
+        }
+
+        async function addExerciseFromLibrary() {
+            if (!selectedLibraryExercise) {
+                alert('Please select an exercise from the library');
+                return;
+            }
+            
+            const duration = parseInt($('#libraryExerciseDuration').val()) || 30;
+            const weight = parseFloat($('#libraryExerciseWeight').val()) || userWeight;
+            const calories = Math.round(selectedLibraryExercise.calPerMinPerKg * duration * weight);
+            
+            const data = {
+                date: getDateString(currentDate),
+                name: selectedLibraryExercise.name,
+                type: selectedLibraryExercise.categoryKey,
+                duration: duration,
+                caloriesBurned: calories
+            };
+            
+            try {
+                const response = await $.ajax({
+                    url: '/api/nutrition/log/exercise',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data)
+                });
+                
+                if (response.success) {
+                    const exerciseName = selectedLibraryExercise.name;
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addExerciseModal'));
+                    if (modal) modal.hide();
+                    clearSelectedExercise();
+                    await loadDayData();
+                    showToast('success', 'Exercise Logged!', `${exerciseName} - ${calories} cal burned`);
+                } else {
+                    alert('Failed to add exercise: ' + (response.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Exercise add error:', error);
+                alert('Failed to add exercise: ' + (error.responseJSON?.error || error.message || 'Server error'));
+            }
+        }
+
+        // Exercise library event handlers
+        $('#exerciseCategoriesAccordion, #searchResultsList').on('click', '.exercise-card', function() {
+            const exerciseId = $(this).data('exercise-id');
+            const categoryKey = $(this).data('category');
+            selectLibraryExercise(exerciseId, categoryKey);
+        });
+
+        $('#clearSelectedExercise').click(() => clearSelectedExercise());
+
+        $('.duration-btn').click(function() {
+            const duration = $(this).data('duration');
+            $('#libraryExerciseDuration').val(duration);
+            $('.duration-btn').removeClass('active');
+            $(this).addClass('active');
+            updateCalorieCalculation();
+        });
+
+        $('#libraryExerciseDuration, #libraryExerciseWeight').on('input', function() {
+            $('.duration-btn').removeClass('active');
+            const currentDuration = parseInt($('#libraryExerciseDuration').val());
+            $(`.duration-btn[data-duration="${currentDuration}"]`).addClass('active');
+            updateCalorieCalculation();
+        });
+
+        let searchTimeout;
+        $('#exerciseSearch').on('input', function() {
+            clearTimeout(searchTimeout);
+            const query = $(this).val();
+            searchTimeout = setTimeout(() => searchExercises(query), 300);
+        });
+
+        // Override the addExercise button to check which tab is active
+        $('#btnAddExercise').off('click').click(function() {
+            const activeTab = $('#exerciseModalTabs .nav-link.active').attr('id');
+            if (activeTab === 'library-tab' && selectedLibraryExercise) {
+                addExerciseFromLibrary();
+            } else {
+                addExercise();
+            }
+        });
+
+        // Reset modal when opened
+        const addExerciseModal = document.getElementById('addExerciseModal');
+        addExerciseModal.addEventListener('show.bs.modal', function() {
+            if (!exerciseLibrary) {
+                loadExerciseLibrary();
+            }
+            clearSelectedExercise();
+            $('#exerciseSearch').val('');
+            $('#exerciseSearchResults').hide();
+            $('#exerciseCategoriesAccordion').show();
+            $('#libraryExerciseWeight').val(userWeight);
+        });
+
         // Initialize
+        // Fasting Tracker
+        let fastingStatus = null;
+        let fastingUpdateInterval = null;
+        const isUserLoggedIn = <%= user ? 'true' : 'false' %>;
+
+        async function loadFastingStatus() {
+            try {
+                const response = await $.get('/api/fasting/status');
+                if (response.success) {
+                    fastingStatus = response;
+                    updateFastingUI(response);
+                }
+            } catch (error) {
+                console.error('Error loading fasting status:', error);
+            }
+        }
+
+        function updateFastingUI(status) {
+            const enabled = status.fastingEnabled;
+            const inFasting = status.inFastingWindow;
+            const activeFast = status.activeFast;
+
+            $('#fastingDisabledOverlay').toggle(!enabled);
+            $('#fastingEnabledToggle').prop('checked', enabled);
+
+            if (status.fastingSchedule) {
+                const scheduleType = status.fastingSchedule.type || '16:8';
+                $('.fasting-schedule-btn').removeClass('active');
+                $(`.fasting-schedule-btn[data-schedule="${scheduleType}"]`).addClass('active');
+                
+                if (scheduleType === 'custom') {
+                    $('#customTimeInputs').show();
+                    $('#eatingWindowStart').val(status.fastingSchedule.eatingWindowStart || '12:00');
+                    $('#eatingWindowEnd').val(status.fastingSchedule.eatingWindowEnd || '20:00');
+                } else {
+                    $('#customTimeInputs').hide();
+                }
+
+                const start = status.eatingWindowStart || status.fastingSchedule.eatingWindowStart || '12:00';
+                const end = status.eatingWindowEnd || status.fastingSchedule.eatingWindowEnd || '20:00';
+                $('#eatingWindowDisplay').text(`${formatTime12h(start)} - ${formatTime12h(end)}`);
+            }
+
+            if (inFasting) {
+                $('#fastingStatusBadge').removeClass('eating').addClass('fasting').text('Fasting');
+                $('#fastingTimerStatus').text('Fasting');
+                $('#fastingTimerProgress').removeClass('eating').addClass('fasting');
+            } else {
+                $('#fastingStatusBadge').removeClass('fasting').addClass('eating').text('Eating');
+                $('#fastingTimerStatus').text('Eating Window');
+                $('#fastingTimerProgress').removeClass('fasting').addClass('eating');
+            }
+
+            $('#fastingTimerTime').text(status.timeRemainingFormatted || '--:--');
+            $('#fastingTimerLabel').text('remaining');
+
+            const circumference = 2 * Math.PI * 80;
+            const progress = status.progress || 0;
+            const offset = circumference - (progress / 100) * circumference;
+            $('#fastingTimerProgress').css('stroke-dashoffset', offset);
+
+            if (inFasting) {
+                $('#nextWindowDisplay').text(formatTime12h(status.eatingWindowStart || '12:00'));
+            } else {
+                $('#nextWindowDisplay').text(formatTime12h(status.eatingWindowEnd || '20:00'));
+            }
+
+            if (activeFast) {
+                $('#fastingActionBtn')
+                    .removeClass('start-fast').addClass('break-fast')
+                    .html('<i class="bi bi-cup-hot-fill me-2"></i>Break Fast');
+                $('#fastingTimerTime').text(activeFast.elapsedFormatted);
+                $('#fastingTimerLabel').text('elapsed');
+            } else {
+                $('#fastingActionBtn')
+                    .removeClass('break-fast').addClass('start-fast')
+                    .html('<i class="bi bi-play-fill me-2"></i>Start Fast');
+            }
+        }
+
+        function formatTime12h(time24) {
+            if (!time24) return '--:--';
+            const [hours, minutes] = time24.split(':');
+            const h = parseInt(hours);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return `${h12}:${minutes} ${ampm}`;
+        }
+
+        async function loadFastingHistory() {
+            try {
+                const response = await $.get('/api/fasting/history?days=7');
+                if (response.success) {
+                    $('#fastingStreakValue').text(response.stats.currentStreak);
+                    $('#fastingCompletedValue').text(response.stats.completedFasts);
+                    $('#fastingRateValue').text(response.stats.completionRate + '%');
+                }
+            } catch (error) {
+                console.error('Error loading fasting history:', error);
+            }
+        }
+
+        async function toggleFastingEnabled() {
+            if (!isUserLoggedIn) {
+                alert('Please log in to use fasting tracking');
+                $('#fastingEnabledToggle').prop('checked', false);
+                return;
+            }
+
+            const enabled = $('#fastingEnabledToggle').is(':checked');
+            
+            try {
+                const response = await $.ajax({
+                    url: '/api/fasting/settings',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ fastingEnabled: enabled })
+                });
+                
+                if (response.success) {
+                    $('#fastingDisabledOverlay').toggle(!enabled);
+                    if (enabled) {
+                        loadFastingStatus();
+                        loadFastingHistory();
+                    }
+                }
+            } catch (error) {
+                console.error('Error toggling fasting:', error);
+                $('#fastingEnabledToggle').prop('checked', !enabled);
+                if (error.status === 401) {
+                    alert('Please log in to use fasting tracking');
+                }
+            }
+        }
+
+        async function updateFastingSchedule(scheduleType) {
+            if (!isUserLoggedIn) {
+                alert('Please log in to change fasting settings');
+                return;
+            }
+
+            $('.fasting-schedule-btn').removeClass('active');
+            $(`.fasting-schedule-btn[data-schedule="${scheduleType}"]`).addClass('active');
+
+            if (scheduleType === 'custom') {
+                $('#customTimeInputs').show();
+                return;
+            } else {
+                $('#customTimeInputs').hide();
+            }
+
+            try {
+                await $.ajax({
+                    url: '/api/fasting/settings',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ scheduleType })
+                });
+                loadFastingStatus();
+            } catch (error) {
+                console.error('Error updating fasting schedule:', error);
+            }
+        }
+
+        async function updateCustomSchedule() {
+            if (!isUserLoggedIn) return;
+
+            const eatingWindowStart = $('#eatingWindowStart').val();
+            const eatingWindowEnd = $('#eatingWindowEnd').val();
+
+            try {
+                await $.ajax({
+                    url: '/api/fasting/settings',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        scheduleType: 'custom',
+                        eatingWindowStart,
+                        eatingWindowEnd
+                    })
+                });
+                loadFastingStatus();
+            } catch (error) {
+                console.error('Error updating custom schedule:', error);
+            }
+        }
+
+        async function handleFastingAction() {
+            if (!isUserLoggedIn) {
+                alert('Please log in to track fasting');
+                return;
+            }
+
+            const isBreakFast = $('#fastingActionBtn').hasClass('break-fast');
+            const endpoint = isBreakFast ? '/api/fasting/end' : '/api/fasting/start';
+
+            try {
+                const response = await $.ajax({
+                    url: endpoint,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({})
+                });
+
+                if (response.success) {
+                    if (isBreakFast && response.completed) {
+                        showToast('success', 'Fast Complete!', `Congratulations! You fasted for ${response.actualDurationFormatted}`);
+                    } else if (isBreakFast) {
+                        showToast('info', 'Fast Ended', `You fasted for ${response.actualDurationFormatted}`);
+                    } else {
+                        showToast('success', 'Fast Started', 'Your fasting timer has begun');
+                    }
+                    loadFastingStatus();
+                    loadFastingHistory();
+                }
+            } catch (error) {
+                console.error('Error with fasting action:', error);
+                alert(error.responseJSON?.error || 'Failed to perform action');
+            }
+        }
+
+        function startFastingTimer() {
+            if (fastingUpdateInterval) {
+                clearInterval(fastingUpdateInterval);
+            }
+            
+            fastingUpdateInterval = setInterval(() => {
+                loadFastingStatus();
+            }, 60000);
+        }
+
+        $('#fastingEnabledToggle').change(toggleFastingEnabled);
+
+        $('#enableFastingBtn').click(() => {
+            $('#fastingEnabledToggle').prop('checked', true).trigger('change');
+        });
+
+        $('.fasting-schedule-btn').click(function() {
+            const schedule = $(this).data('schedule');
+            updateFastingSchedule(schedule);
+        });
+
+        $('#eatingWindowStart, #eatingWindowEnd').change(function() {
+            updateCustomSchedule();
+        });
+
+        $('#fastingActionBtn').click(handleFastingAction);
+
         $(document).ready(() => {
             loadDayData();
             loadWeeklyChart();
             loadWeightChart();
             loadStreak();
             loadFavorites();
+            loadExerciseLibrary();
+            loadFastingStatus();
+            loadFastingHistory();
+            startFastingTimer();
         });
     </script>
 </body>

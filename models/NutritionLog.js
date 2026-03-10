@@ -72,6 +72,30 @@ const exerciseLogSchema = new mongoose.Schema({
   }
 });
 
+const fastingLogSchema = new mongoose.Schema({
+  startedAt: {
+    type: Date,
+    required: true
+  },
+  endedAt: {
+    type: Date
+  },
+  completed: {
+    type: Boolean,
+    default: false
+  },
+  targetDuration: {
+    type: Number
+  },
+  actualDuration: {
+    type: Number
+  },
+  notes: {
+    type: String,
+    default: ''
+  }
+});
+
 const nutritionLogSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -127,6 +151,7 @@ const nutritionLogSchema = new mongoose.Schema({
     enum: ['great', 'good', 'okay', 'tired', 'stressed', ''],
     default: ''
   },
+  fastingLog: fastingLogSchema,
   createdAt: {
     type: Date,
     default: Date.now

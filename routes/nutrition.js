@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const NutritionLog = require('../models/NutritionLog');
 const { optionalAuth } = require('../middleware/auth');
+const { checkAndUnlockAchievements } = require('./achievements');
 const https = require('https');
 const http = require('http');
 
@@ -121,7 +122,13 @@ router.post('/log/meal', async (req, res) => {
     });
 
     await log.save();
-    res.json({ success: true, log });
+    
+    let newAchievements = [];
+    if (userId) {
+      newAchievements = await checkAndUnlockAchievements(userId, 'meal_logged');
+    }
+    
+    res.json({ success: true, log, newAchievements });
   } catch (error) {
     console.error('Error adding meal:', error);
     res.status(500).json({ error: 'Failed to add meal' });
@@ -156,7 +163,13 @@ router.post('/log/from-plan', async (req, res) => {
     });
 
     await log.save();
-    res.json({ success: true, log, message: `${meal.name} logged successfully!` });
+    
+    let newAchievements = [];
+    if (userId) {
+      newAchievements = await checkAndUnlockAchievements(userId, 'meal_logged');
+    }
+    
+    res.json({ success: true, log, message: `${meal.name} logged successfully!`, newAchievements });
   } catch (error) {
     console.error('Error logging meal from plan:', error);
     res.status(500).json({ error: 'Failed to log meal' });

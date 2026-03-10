@@ -247,6 +247,53 @@
             display: flex;
             gap: 4px;
         }
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .achievement-toast {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            animation: slideIn 0.5s ease, fadeOut 0.5s ease 4.5s forwards;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            max-width: 320px;
+        }
+        .achievement-toast .toast-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        .achievement-toast .toast-content h6 {
+            margin: 0;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .achievement-toast .toast-content p {
+            margin: 0;
+            font-weight: 600;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -509,6 +556,9 @@
                         $('.loading').hide();
                         if (response.success) {
                             displayMealPlan(response.mealPlan, response.cached);
+                            if (response.newAchievements && response.newAchievements.length > 0) {
+                                response.newAchievements.forEach(a => showAchievementToast(a));
+                            }
                         } else {
                             alert('Failed to generate meal plan');
                         }
@@ -931,6 +981,9 @@
                     $('.loading').hide();
                     if (response.success) {
                         displayMealPlan(response.mealPlan, response.cached);
+                        if (response.newAchievements && response.newAchievements.length > 0) {
+                            response.newAchievements.forEach(a => showAchievementToast(a));
+                        }
                     } else {
                         alert('Failed to generate meal plan');
                     }
@@ -1486,6 +1539,30 @@
             `);
             $('body').append(toast);
             setTimeout(() => toast.remove(), 3000);
+        }
+        
+        function showAchievementToast(achievement) {
+            const toast = $(`
+                <div class="achievement-toast">
+                    <div class="toast-icon">
+                        <i class="bi ${achievement.icon || 'bi-trophy'}"></i>
+                    </div>
+                    <div class="toast-content">
+                        <h6>Achievement Unlocked!</h6>
+                        <p>${escapeHtml(achievement.name)}</p>
+                    </div>
+                </div>
+            `);
+            
+            if (!$('.toast-container').length) {
+                $('body').append('<div class="toast-container"></div>');
+            }
+            
+            $('.toast-container').append(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
         }
     </script>
 </body>

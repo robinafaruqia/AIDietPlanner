@@ -16,6 +16,17 @@ const weightEntrySchema = new mongoose.Schema({
   }
 });
 
+const achievementSchema = new mongoose.Schema({
+  id: {
+    type: String,
+    required: true
+  },
+  unlockedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -68,6 +79,33 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'MealPlan'
   }],
+  achievements: {
+    type: [achievementSchema],
+    default: []
+  },
+  mealPlansGenerated: {
+    type: Number,
+    default: 0
+  },
+  fastingEnabled: {
+    type: Boolean,
+    default: false
+  },
+  fastingSchedule: {
+    type: {
+      type: String,
+      enum: ['16:8', '18:6', '20:4', 'custom'],
+      default: '16:8'
+    },
+    eatingWindowStart: {
+      type: String,
+      default: '12:00'
+    },
+    eatingWindowEnd: {
+      type: String,
+      default: '20:00'
+    }
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -116,7 +154,9 @@ userSchema.methods.toPublicJSON = function() {
     currentWeight: this.currentWeight,
     targetWeight: this.targetWeight,
     startDate: this.startDate,
-    createdAt: this.createdAt
+    createdAt: this.createdAt,
+    fastingEnabled: this.fastingEnabled,
+    fastingSchedule: this.fastingSchedule
   };
 };
 
@@ -155,6 +195,29 @@ userSchema.methods.getWeightProgress = function() {
     startDate: this.startDate,
     daysOnPlan: this.startDate ? Math.floor((Date.now() - this.startDate) / (1000 * 60 * 60 * 24)) : 0
   };
+};
+
+userSchema.methods.hasAchievement = function(achievementId) {
+  return this.achievements.some(a => a.id === achievementId);
+};
+
+userSchema.methods.unlockAchievement = async function(achievementId) {
+  if (this.hasAchievement(achievementId)) {
+    return null;
+  }
+  
+  const achievement = {
+    id: achievementId,
+    unlockedAt: new Date()
+  };
+  
+  this.achievements.push(achievement);
+  await this.save();
+  return achievement;
+};
+
+userSchema.methods.getUnlockedAchievementIds = function() {
+  return this.achievements.map(a => a.id);
 };
 
 userSchema.statics.findByEmail = function(email) {

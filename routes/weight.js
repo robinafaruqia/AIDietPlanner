@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { apiAuth } = require('../middleware/auth');
+const { checkAndUnlockAchievements } = require('./achievements');
 
 router.post('/log', apiAuth, async (req, res) => {
   try {
@@ -29,11 +30,14 @@ router.post('/log', apiAuth, async (req, res) => {
 
     await user.save();
 
+    const newAchievements = await checkAndUnlockAchievements(user._id, 'weight_logged');
+
     res.json({
       success: true,
       message: 'Weight logged successfully',
       entry: user.weightHistory[user.weightHistory.length - 1],
-      progress: user.getWeightProgress()
+      progress: user.getWeightProgress(),
+      newAchievements
     });
   } catch (error) {
     console.error('Error logging weight:', error);

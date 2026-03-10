@@ -3,46 +3,323 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Diet Planner</title>
+    <meta name="description" content="AI-powered personalized meal plans tailored to your health conditions and weight goals">
+    <meta name="theme-color" content="#667eea">
+    <title>AI Diet Planner - Personalized Meal Plans</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
         }
+
+        /* Animated Background */
         .hero-section {
-            padding: 80px 0;
+            padding: 100px 0 80px;
             color: white;
+            position: relative;
+            overflow: hidden;
         }
-        .card {
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(10%, 10%) rotate(5deg); }
+            50% { transform: translate(5%, -5%) rotate(-5deg); }
+            75% { transform: translate(-10%, 5%) rotate(3deg); }
+        }
+
+        /* Hero Content Animation */
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-title {
+            animation: heroFadeIn 0.8s ease-out;
+        }
+
+        .hero-subtitle {
+            animation: heroFadeIn 0.8s ease-out 0.2s both;
+        }
+
+        .hero-buttons {
+            animation: heroFadeIn 0.8s ease-out 0.4s both;
+        }
+
+        @keyframes heroFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Pulse Animation for Hero Icon */
+        .hero-icon {
+            display: inline-block;
+            animation: heartbeat 2s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Enhanced Cards */
+        .feature-card {
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             border: none;
+            background: var(--card-bg);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
         }
-        .btn-primary {
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+
+        .feature-card:hover::before {
+            opacity: 1;
         }
+
         .feature-icon {
-            font-size: 3rem;
-            color: #667eea;
+            font-size: 3.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 20px;
+            transition: transform 0.3s ease;
         }
+
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1);
+        }
+
+        .feature-card h4 {
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Welcome Card Enhancement */
         .welcome-card {
-            background: rgba(255,255,255,0.1);
-            border-radius: 15px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 24px 32px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: welcomeFadeIn 0.6s ease-out;
+        }
+
+        @keyframes welcomeFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .welcome-card h4 {
+            font-weight: 700;
+        }
+
+        /* CTA Buttons Enhancement */
+        .btn-hero {
+            padding: 16px 36px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-hero-primary {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+
+        .btn-hero-primary:hover {
+            background: #f8f9fa;
+            color: #5a6fd6;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+        }
+
+        .btn-hero-outline {
+            border: 2px solid rgba(255,255,255,0.8);
+            color: white;
+            background: transparent;
+        }
+
+        .btn-hero-outline:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: white;
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        /* Why Create Account Section */
+        .benefits-card {
+            border-radius: 20px;
+            background: var(--card-bg);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .benefit-item {
             padding: 20px;
-            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            border-radius: 16px;
+        }
+
+        .benefit-item:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-4px);
+        }
+
+        .benefit-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 1.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .benefit-item:hover .benefit-icon {
+            transform: scale(1.1);
+        }
+
+        .benefit-icon.primary {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+            color: #667eea;
+        }
+
+        .benefit-icon.success {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(5, 150, 105, 0.15));
+            color: #22c55e;
+        }
+
+        .benefit-icon.warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15));
+            color: #f59e0b;
+        }
+
+        /* Stats Section for Logged-in Users */
+        .quick-stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+            animation: heroFadeIn 0.8s ease-out 0.6s both;
+        }
+
+        .quick-stat-item {
+            background: rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 16px 24px;
             backdrop-filter: blur(10px);
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .quick-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .quick-stat-label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        /* Footer Enhancement */
+        footer {
+            background: #1a1d21 !important;
+            padding: 30px 0;
+        }
+
+        footer p {
+            opacity: 0.7;
+        }
+
+        /* Features Grid Animation */
+        .features-section {
+            position: relative;
+            z-index: 1;
+        }
+
+        .features-section .col-md-3:nth-child(1) .feature-card { animation-delay: 0.1s; }
+        .features-section .col-md-3:nth-child(2) .feature-card { animation-delay: 0.2s; }
+        .features-section .col-md-3:nth-child(3) .feature-card { animation-delay: 0.3s; }
+        .features-section .col-md-3:nth-child(4) .feature-card { animation-delay: 0.4s; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 60px 0;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .btn-hero {
+                padding: 14px 28px;
+                font-size: 1rem;
+            }
+
+            .quick-stats {
+                gap: 12px;
+            }
+
+            .quick-stat-item {
+                padding: 12px 16px;
+                min-width: 100px;
+            }
         }
     </style>
 </head>
@@ -51,107 +328,178 @@
     <%- include('partials/navbar') %>
 
     <div class="hero-section text-center">
-        <div class="container">
+        <div class="container hero-content">
             <% if (typeof user !== 'undefined' && user) { %>
-            <div class="welcome-card mx-auto" style="max-width: 600px;">
-                <h4 class="mb-2">Welcome back, <%= user.name %>!</h4>
+            <div class="welcome-card mx-auto" style="max-width: 650px;">
+                <h4 class="mb-2">
+                    <i class="bi bi-hand-wave me-2"></i>Welcome back, <%= user.name %>!
+                </h4>
                 <% if (user.currentWeight && user.targetWeight) { %>
-                <p class="mb-0 opacity-75">
-                    Current: <%= user.currentWeight %> kg | Target: <%= user.targetWeight %> kg
+                <p class="mb-0 opacity-85">
+                    Current: <strong><%= user.currentWeight %> kg</strong> | 
+                    Target: <strong><%= user.targetWeight %> kg</strong>
                     <% const progress = user.startWeight - user.currentWeight; %>
                     <% if (progress > 0) { %>
-                    | <span class="text-success">-<%= progress.toFixed(1) %> kg</span>
+                    | <span class="badge bg-success"><i class="bi bi-arrow-down"></i> <%= progress.toFixed(1) %> kg lost</span>
                     <% } %>
                 </p>
                 <% } %>
             </div>
             <% } %>
             
-            <h1 class="display-4 fw-bold mb-4">
-                <i class="bi bi-heart-pulse"></i> AI Diet Planner
+            <h1 class="display-4 fw-bold mb-4 hero-title">
+                <span class="hero-icon"><i class="bi bi-heart-pulse"></i></span> AI Diet Planner
             </h1>
-            <p class="lead mb-5">Personalized meal plans tailored to your weight and health conditions</p>
+            <p class="lead mb-5 hero-subtitle" style="max-width: 600px; margin: 0 auto;">
+                Smart, personalized meal plans powered by AI — tailored to your health conditions, weight goals, and dietary preferences
+            </p>
             
             <% if (typeof user !== 'undefined' && user) { %>
-            <div class="d-flex gap-3 justify-content-center flex-wrap">
-                <a href="/plan" class="btn btn-primary btn-lg">
-                    <i class="bi bi-plus-circle"></i> Create Plan
+            <div class="d-flex gap-3 justify-content-center flex-wrap hero-buttons">
+                <a href="/plan" class="btn btn-hero btn-hero-primary">
+                    <i class="bi bi-magic me-2"></i>Create New Plan
                 </a>
-                <a href="/weight" class="btn btn-outline-light btn-lg">
-                    <i class="bi bi-graph-up"></i> Track Weight
+                <a href="/tracking" class="btn btn-hero btn-hero-outline">
+                    <i class="bi bi-clipboard-data me-2"></i>Track Nutrition
                 </a>
             </div>
+            <div class="quick-stats">
+                <div class="quick-stat-item">
+                    <span class="quick-stat-value"><i class="bi bi-fire text-warning"></i></span>
+                    <span class="quick-stat-label">Streaks</span>
+                </div>
+                <div class="quick-stat-item">
+                    <span class="quick-stat-value"><i class="bi bi-trophy text-warning"></i></span>
+                    <span class="quick-stat-label">Achievements</span>
+                </div>
+                <div class="quick-stat-item">
+                    <span class="quick-stat-value"><i class="bi bi-graph-up-arrow text-success"></i></span>
+                    <span class="quick-stat-label">Progress</span>
+                </div>
+            </div>
             <% } else { %>
-            <div class="d-flex gap-3 justify-content-center flex-wrap">
-                <a href="/register" class="btn btn-primary btn-lg">
-                    <i class="bi bi-person-plus"></i> Get Started Free
+            <div class="d-flex gap-3 justify-content-center flex-wrap hero-buttons">
+                <a href="/register" class="btn btn-hero btn-hero-primary">
+                    <i class="bi bi-rocket-takeoff me-2"></i>Get Started Free
                 </a>
-                <a href="/plan" class="btn btn-outline-light btn-lg">
-                    <i class="bi bi-eye"></i> Try Without Account
+                <a href="/plan" class="btn btn-hero btn-hero-outline">
+                    <i class="bi bi-eye me-2"></i>Try Without Account
                 </a>
             </div>
             <% } %>
         </div>
     </div>
 
-    <div class="container my-5">
+    <div class="container my-5 features-section">
         <div class="row g-4">
-            <div class="col-md-3">
-                <div class="card h-100 text-center p-4">
-                    <i class="bi bi-person-check feature-icon"></i>
-                    <h4>Personalized Plans</h4>
-                    <p class="text-muted">Custom meal plans based on your weight and health conditions</p>
+            <div class="col-md-3 col-6">
+                <div class="card feature-card h-100 text-center p-4 position-relative">
+                    <i class="bi bi-robot feature-icon"></i>
+                    <h4>AI-Powered Plans</h4>
+                    <p class="text-muted mb-0">Smart meal plans customized for your health conditions and goals</p>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card h-100 text-center p-4">
+            <div class="col-md-3 col-6">
+                <div class="card feature-card h-100 text-center p-4 position-relative">
                     <i class="bi bi-calendar-week feature-icon"></i>
                     <h4>Weekly Planning</h4>
-                    <p class="text-muted">Complete 7-day meal plans with breakfast, lunch, dinner, and snacks</p>
+                    <p class="text-muted mb-0">Complete 7-day plans with breakfast, lunch, dinner & snacks</p>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card h-100 text-center p-4">
-                    <i class="bi bi-cart feature-icon"></i>
-                    <h4>Grocery Lists</h4>
-                    <p class="text-muted">AI-generated shopping lists organized by category</p>
+            <div class="col-md-3 col-6">
+                <div class="card feature-card h-100 text-center p-4 position-relative">
+                    <i class="bi bi-clipboard-data feature-icon"></i>
+                    <h4>Nutrition Tracking</h4>
+                    <p class="text-muted mb-0">Log meals, track macros, and monitor your daily progress</p>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card h-100 text-center p-4">
+            <div class="col-md-3 col-6">
+                <div class="card feature-card h-100 text-center p-4 position-relative">
                     <i class="bi bi-graph-up feature-icon"></i>
                     <h4>Weight Tracking</h4>
-                    <p class="text-muted">Track your progress with charts and see your weight history</p>
+                    <p class="text-muted mb-0">Visualize your journey with charts and analytics</p>
                     <% if (typeof user !== 'undefined' && user) { %>
-                    <a href="/weight" class="btn btn-outline-primary btn-sm mt-2">Track Now</a>
+                    <a href="/weight" class="btn btn-outline-primary btn-sm mt-3">Track Now</a>
                     <% } else { %>
-                    <a href="/register" class="btn btn-outline-primary btn-sm mt-2">Sign Up</a>
+                    <a href="/register" class="btn btn-outline-primary btn-sm mt-3">Sign Up</a>
                     <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Features Row -->
+        <div class="row g-4 mt-2">
+            <div class="col-md-3 col-6">
+                <div class="card feature-card h-100 text-center p-4 position-relative">
+                    <i class="bi bi-trophy feature-icon"></i>
+                    <h4>Achievements</h4>
+                    <p class="text-muted mb-0">Unlock badges and celebrate your milestones</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card feature-card h-100 text-center p-4 position-relative">
+                    <i class="bi bi-clock-history feature-icon"></i>
+                    <h4>Fasting Tracker</h4>
+                    <p class="text-muted mb-0">Monitor intermittent fasting windows easily</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card feature-card h-100 text-center p-4 position-relative">
+                    <i class="bi bi-upc-scan feature-icon"></i>
+                    <h4>Barcode Scanner</h4>
+                    <p class="text-muted mb-0">Quickly log packaged foods by scanning</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card feature-card h-100 text-center p-4 position-relative">
+                    <i class="bi bi-moon-stars feature-icon"></i>
+                    <h4>Dark Mode</h4>
+                    <p class="text-muted mb-0">Easy on the eyes, day or night</p>
                 </div>
             </div>
         </div>
         
         <% if (!(typeof user !== 'undefined' && user)) { %>
         <div class="row mt-5">
-            <div class="col-md-8 mx-auto">
-                <div class="card p-4 text-center">
-                    <h3 class="mb-3">Why Create an Account?</h3>
-                    <div class="row g-3">
+            <div class="col-lg-8 mx-auto">
+                <div class="card benefits-card p-4 p-md-5 text-center">
+                    <h3 class="fw-bold mb-4">Why Create a Free Account?</h3>
+                    <div class="row g-4">
                         <div class="col-md-4">
-                            <i class="bi bi-save text-primary" style="font-size: 2rem;"></i>
-                            <p class="mb-0 mt-2">Save your meal plans</p>
+                            <div class="benefit-item">
+                                <div class="benefit-icon primary">
+                                    <i class="bi bi-cloud-arrow-up"></i>
+                                </div>
+                                <h5 class="fw-bold">Save Your Plans</h5>
+                                <p class="text-muted mb-0 small">Keep all your meal plans stored safely in the cloud</p>
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            <i class="bi bi-graph-up-arrow text-success" style="font-size: 2rem;"></i>
-                            <p class="mb-0 mt-2">Track weight progress</p>
+                            <div class="benefit-item">
+                                <div class="benefit-icon success">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                </div>
+                                <h5 class="fw-bold">Track Progress</h5>
+                                <p class="text-muted mb-0 small">Monitor weight, nutrition, and see your transformation</p>
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            <i class="bi bi-clock-history text-warning" style="font-size: 2rem;"></i>
-                            <p class="mb-0 mt-2">View your history</p>
+                            <div class="benefit-item">
+                                <div class="benefit-icon warning">
+                                    <i class="bi bi-star-fill"></i>
+                                </div>
+                                <h5 class="fw-bold">Earn Rewards</h5>
+                                <p class="text-muted mb-0 small">Unlock achievements and build healthy streaks</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-4">
-                        <a href="/register" class="btn btn-primary">Create Free Account</a>
+                    <div class="mt-4 pt-2">
+                        <a href="/register" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-person-plus me-2"></i>Create Free Account
+                        </a>
+                        <p class="text-muted small mt-3 mb-0">
+                            <i class="bi bi-shield-check me-1"></i>No credit card required • Free forever
+                        </p>
                     </div>
                 </div>
             </div>
@@ -159,9 +507,14 @@
         <% } %>
     </div>
 
-    <footer class="bg-dark text-white text-center py-4 mt-5">
+    <footer class="text-white text-center py-4 mt-5">
         <div class="container">
-            <p class="mb-0">&copy; 2024 AI Diet Planner. All rights reserved.</p>
+            <div class="mb-3">
+                <a href="/plan" class="text-white text-decoration-none me-4 opacity-75">Create Plan</a>
+                <a href="/tracking" class="text-white text-decoration-none me-4 opacity-75">Tracking</a>
+                <a href="/login" class="text-white text-decoration-none opacity-75">Login</a>
+            </div>
+            <p class="mb-0 opacity-50">&copy; 2024 AI Diet Planner. All rights reserved.</p>
         </div>
     </footer>
 

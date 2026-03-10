@@ -104,6 +104,9 @@ const mealPlanRoutes = require('./routes/mealPlan');
 const nutritionRoutes = require('./routes/nutrition');
 const weightRoutes = require('./routes/weight');
 const favoritesRoutes = require('./routes/favorites');
+const exerciseLibraryRoutes = require('./routes/exercise-library');
+const achievementsRoutes = require('./routes/achievements');
+const fastingRoutes = require('./routes/fasting');
 const { getAllConditions } = require('./config/healthConditions');
 
 app.use('/api/', apiLimiter);
@@ -112,6 +115,9 @@ app.use('/api/meal-plan', mealPlanRoutes);
 app.use('/api/nutrition', nutritionRoutes);
 app.use('/api/weight', weightRoutes);
 app.use('/api/favorites', favoritesRoutes);
+app.use('/api/exercise-library', exerciseLibraryRoutes);
+app.use('/api/achievements', achievementsRoutes);
+app.use('/api/fasting', fastingRoutes);
 
 app.get('/api/health-conditions', (req, res) => {
   res.json({ success: true, conditions: getAllConditions() });

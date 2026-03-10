@@ -6,172 +6,353 @@
     <title>Login - AI Diet Planner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
         }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 50%);
+            animation: bgFloat 20s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(5%, 5%) rotate(5deg); }
+        }
+
         .login-container {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 40px 20px;
+            position: relative;
+            z-index: 1;
         }
+
         .login-card {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+            padding: 48px 40px;
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
+            animation: cardSlideUp 0.5s ease-out;
         }
+
+        @keyframes cardSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .login-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 32px;
         }
-        .login-header i {
-            font-size: 3rem;
-            color: #667eea;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: 600;
-            width: 100%;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        .btn-google {
-            background: white;
-            border: 2px solid #ddd;
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: 600;
-            width: 100%;
-            color: #333;
+
+        .login-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            margin: 0 auto 20px;
         }
+
+        .login-icon i {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-header h2 {
+            font-weight: 700;
+            font-size: 1.75rem;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            width: 100%;
+            font-size: 1rem;
+            box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-google {
+            background: white;
+            border: 2px solid #e5e7eb;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            width: 100%;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+        }
+
         .btn-google:hover {
-            background: #f8f9fa;
-            border-color: #ccc;
+            background: #f9fafb;
+            border-color: #d1d5db;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        .btn-google img {
-            width: 20px;
-            height: 20px;
-        }
+
         .divider {
             display: flex;
             align-items: center;
-            margin: 25px 0;
+            margin: 28px 0;
         }
+
         .divider::before, .divider::after {
             content: '';
             flex: 1;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #e5e7eb;
         }
+
         .divider span {
-            padding: 0 15px;
-            color: #888;
-            font-size: 14px;
+            padding: 0 16px;
+            color: #9ca3af;
+            font-size: 0.875rem;
+            font-weight: 500;
         }
+
+        .form-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
         .form-control {
-            padding: 12px 15px;
-            border-radius: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            font-size: 1rem;
+            transition: all 0.2s ease;
         }
+
         .form-control:focus {
             border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
         }
-        .form-label {
-            font-weight: 500;
-            color: #333;
+
+        .form-control::placeholder {
+            color: #9ca3af;
         }
+
+        .input-group-icon {
+            position: relative;
+        }
+
+        .input-group-icon .form-control {
+            padding-left: 48px;
+        }
+
+        .input-group-icon i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 1.1rem;
+        }
+
         .register-link {
             text-align: center;
-            margin-top: 25px;
-            color: #666;
+            margin-top: 28px;
+            color: #6b7280;
+            font-size: 0.95rem;
         }
+
         .register-link a {
             color: #667eea;
             font-weight: 600;
             text-decoration: none;
+            transition: color 0.2s ease;
         }
+
         .register-link a:hover {
+            color: #5a6fd6;
             text-decoration: underline;
         }
+
         .back-home {
-            position: absolute;
-            top: 20px;
-            left: 20px;
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            z-index: 10;
         }
+
         .back-home a {
             color: white;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 50px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
         }
+
         .back-home a:hover {
-            text-decoration: underline;
+            background: rgba(255,255,255,0.25);
+            transform: translateX(-4px);
+        }
+
+        .alert {
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-weight: 500;
+            border: none;
+            animation: alertShake 0.4s ease;
+        }
+
+        @keyframes alertShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+            color: #dc2626;
         }
 
         /* Dark mode styles */
         [data-theme="dark"] .login-card {
-            background: #2b3035;
-            color: #e9ecef;
+            background: #1f2937;
+            color: #f3f4f6;
         }
-        [data-theme="dark"] .login-header i {
-            color: #8ea8f0;
+
+        [data-theme="dark"] .login-icon {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
         }
-        [data-theme="dark"] .login-card h2 {
-            color: #e9ecef;
+
+        [data-theme="dark"] .login-header p {
+            color: #9ca3af;
         }
+
         [data-theme="dark"] .form-label {
-            color: #e9ecef;
+            color: #f3f4f6;
         }
+
         [data-theme="dark"] .form-control {
-            background-color: #343a40;
-            border-color: #495057;
-            color: #e9ecef;
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #f3f4f6;
         }
+
         [data-theme="dark"] .form-control:focus {
-            background-color: #343a40;
+            background-color: #374151;
             border-color: #667eea;
-            color: #e9ecef;
         }
+
         [data-theme="dark"] .form-control::placeholder {
-            color: #adb5bd;
+            color: #9ca3af;
         }
+
+        [data-theme="dark"] .input-group-icon i {
+            color: #9ca3af;
+        }
+
         [data-theme="dark"] .btn-google {
-            background: #343a40;
-            border-color: #495057;
-            color: #e9ecef;
+            background: #374151;
+            border-color: #4b5563;
+            color: #f3f4f6;
         }
+
         [data-theme="dark"] .btn-google:hover {
-            background: #3d444b;
+            background: #4b5563;
         }
+
         [data-theme="dark"] .divider::before,
         [data-theme="dark"] .divider::after {
-            border-color: #495057;
+            border-color: #4b5563;
         }
+
         [data-theme="dark"] .divider span {
-            color: #adb5bd;
+            color: #9ca3af;
         }
+
         [data-theme="dark"] .register-link {
-            color: #adb5bd;
+            color: #9ca3af;
         }
+
         [data-theme="dark"] .alert-danger {
-            background-color: #3a1a1a;
-            border-color: #4a1d1d;
-            color: #f8b4b4;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+            color: #fca5a5;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 32px 24px;
+                margin: 0 16px;
+            }
+
+            .back-home {
+                top: 16px;
+                left: 16px;
+            }
+
+            .back-home a {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
         }
     </style>
     <script>
@@ -193,19 +374,21 @@
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
-                <i class="bi bi-heart-pulse"></i>
-                <h2 class="mt-3">Welcome Back</h2>
-                <p class="text-muted">Sign in to your AI Diet Planner account</p>
+                <div class="login-icon">
+                    <i class="bi bi-heart-pulse"></i>
+                </div>
+                <h2>Welcome Back</h2>
+                <p>Sign in to continue your health journey</p>
             </div>
 
             <% if (error) { %>
-                <div class="alert alert-danger" role="alert">
-                    <i class="bi bi-exclamation-circle"></i>
+                <div class="alert alert-danger mb-4" role="alert">
+                    <i class="bi bi-exclamation-circle me-2"></i>
                     <%= error === 'google_auth_failed' ? 'Google sign-in failed. Please try again.' : error %>
                 </div>
             <% } %>
 
-            <div id="errorAlert" class="alert alert-danger" style="display: none;" role="alert"></div>
+            <div id="errorAlert" class="alert alert-danger mb-4" style="display: none;" role="alert"></div>
 
             <a href="/api/auth/google" class="btn btn-google mb-3">
                 <svg width="20" height="20" viewBox="0 0 24 24">
@@ -223,21 +406,27 @@
 
             <form id="loginForm">
                 <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
+                    <label for="email" class="form-label">Email Address</label>
+                    <div class="input-group-icon">
+                        <i class="bi bi-envelope"></i>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
+                    </div>
                 </div>
                 <div class="mb-4">
                     <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                    <div class="input-group-icon">
+                        <i class="bi bi-lock"></i>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary" id="loginBtn">
                     <span class="btn-text">Sign In</span>
-                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    <span class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
                 </button>
             </form>
 
             <div class="register-link">
-                Don't have an account? <a href="/register">Sign up</a>
+                Don't have an account? <a href="/register">Create one</a>
             </div>
         </div>
     </div>
@@ -269,16 +458,24 @@
                 });
 
                 if (response.success) {
+                    $btnText.text('Success! Redirecting...');
                     window.location.href = '/';
                 }
             } catch (error) {
                 const msg = error.responseJSON?.error || 'Login failed. Please try again.';
-                $('#errorAlert').text(msg).show();
+                $('#errorAlert').html('<i class="bi bi-exclamation-circle me-2"></i>' + msg).show();
             } finally {
                 $btn.prop('disabled', false);
                 $btnText.text('Sign In');
                 $spinner.addClass('d-none');
             }
+        });
+
+        // Add input focus animations
+        $('.form-control').on('focus', function() {
+            $(this).parent().find('i').css('color', '#667eea');
+        }).on('blur', function() {
+            $(this).parent().find('i').css('color', '#9ca3af');
         });
     </script>
 </body>

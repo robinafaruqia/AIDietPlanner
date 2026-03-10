@@ -99,6 +99,147 @@
             background: #e8f5e9;
             color: #2e7d32;
         }
+        .achievement-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+        }
+        .achievement-badge {
+            text-align: center;
+            padding: 20px 10px;
+            border-radius: 15px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .achievement-badge.unlocked {
+            background: white;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        }
+        .achievement-badge.locked {
+            opacity: 0.5;
+            filter: grayscale(100%);
+        }
+        .achievement-badge:hover {
+            transform: translateY(-3px);
+        }
+        .achievement-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 10px;
+            color: white;
+        }
+        .achievement-badge.locked .achievement-icon {
+            background: #ccc !important;
+        }
+        .achievement-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .achievement-desc {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        .achievement-date {
+            font-size: 10px;
+            color: #667eea;
+        }
+        .achievement-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        .achievement-stat {
+            text-align: center;
+        }
+        .achievement-stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .achievement-stat-label {
+            font-size: 12px;
+            color: #888;
+        }
+        .progress-ring {
+            width: 100px;
+            height: 100px;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .achievement-toast {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            animation: slideIn 0.5s ease, fadeOut 0.5s ease 4.5s forwards;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .achievement-toast .toast-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .achievement-toast .toast-content h6 {
+            margin: 0;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .achievement-toast .toast-content p {
+            margin: 0;
+            font-weight: 600;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .category-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .category-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #f0f0f0;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .category-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .category-tab:hover:not(.active) {
+            background: #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -158,6 +299,42 @@
             </div>
         </div>
         <% } %>
+
+        <!-- Achievements Section -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-award"></i> Achievements</span>
+                <span class="badge bg-primary" id="achievementCount">0/0</span>
+            </div>
+            <div class="card-body">
+                <div class="achievement-stats" id="achievementStats">
+                    <div class="achievement-stat">
+                        <div class="achievement-stat-value" id="unlockedCount">0</div>
+                        <div class="achievement-stat-label">Unlocked</div>
+                    </div>
+                    <div class="achievement-stat">
+                        <div class="achievement-stat-value" id="totalCount">0</div>
+                        <div class="achievement-stat-label">Total</div>
+                    </div>
+                    <div class="achievement-stat">
+                        <div class="achievement-stat-value" id="percentComplete">0%</div>
+                        <div class="achievement-stat-label">Complete</div>
+                    </div>
+                </div>
+                
+                <div class="category-tabs" id="categoryTabs">
+                    <button class="category-tab active" data-category="all">
+                        <i class="bi bi-grid"></i> All
+                    </button>
+                </div>
+                
+                <div class="achievement-grid" id="achievementGrid">
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-hourglass-split"></i> Loading achievements...
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="row">
             <div class="col-lg-6">
@@ -325,6 +502,134 @@
                 window.location.href = '/?deleted=true';
             } catch (error) {
                 alert(error.responseJSON?.error || 'Failed to delete account');
+            }
+        });
+
+        let allAchievements = [];
+        let categories = {};
+
+        async function loadAchievements() {
+            try {
+                const response = await $.ajax({
+                    url: '/api/achievements',
+                    method: 'GET'
+                });
+
+                if (response.success) {
+                    allAchievements = response.achievements;
+                    categories = response.categories;
+                    
+                    $('#unlockedCount').text(response.stats.unlocked);
+                    $('#totalCount').text(response.stats.total);
+                    $('#percentComplete').text(response.stats.percentage + '%');
+                    $('#achievementCount').text(`${response.stats.unlocked}/${response.stats.total}`);
+                    
+                    renderCategoryTabs();
+                    renderAchievements('all');
+                }
+            } catch (error) {
+                console.error('Error loading achievements:', error);
+                $('#achievementGrid').html('<div class="text-center text-muted py-4">Failed to load achievements</div>');
+            }
+        }
+
+        function renderCategoryTabs() {
+            const tabsHtml = `
+                <button class="category-tab active" data-category="all">
+                    <i class="bi bi-grid"></i> All
+                </button>
+                ${Object.entries(categories).map(([key, cat]) => `
+                    <button class="category-tab" data-category="${key}">
+                        <i class="${cat.icon}"></i> ${cat.name}
+                    </button>
+                `).join('')}
+            `;
+            $('#categoryTabs').html(tabsHtml);
+            
+            $('.category-tab').click(function() {
+                $('.category-tab').removeClass('active');
+                $(this).addClass('active');
+                renderAchievements($(this).data('category'));
+            });
+        }
+
+        function renderAchievements(category) {
+            const filtered = category === 'all' 
+                ? allAchievements 
+                : allAchievements.filter(a => a.category === category);
+            
+            const sortedAchievements = [...filtered].sort((a, b) => {
+                if (a.unlocked && !b.unlocked) return -1;
+                if (!a.unlocked && b.unlocked) return 1;
+                return 0;
+            });
+
+            if (sortedAchievements.length === 0) {
+                $('#achievementGrid').html('<div class="text-center text-muted py-4">No achievements in this category</div>');
+                return;
+            }
+
+            const html = sortedAchievements.map(achievement => {
+                const statusClass = achievement.unlocked ? 'unlocked' : 'locked';
+                const dateStr = achievement.unlockedAt 
+                    ? new Date(achievement.unlockedAt).toLocaleDateString()
+                    : '';
+                
+                return `
+                    <div class="achievement-badge ${statusClass}" title="${achievement.description}">
+                        <div class="achievement-icon" style="background: ${achievement.color}">
+                            <i class="bi ${achievement.icon}"></i>
+                        </div>
+                        <div class="achievement-name">${achievement.name}</div>
+                        <div class="achievement-desc">${achievement.description}</div>
+                        ${achievement.unlocked 
+                            ? `<div class="achievement-date"><i class="bi bi-check-circle"></i> ${dateStr}</div>`
+                            : '<div class="achievement-date"><i class="bi bi-lock"></i> Locked</div>'
+                        }
+                    </div>
+                `;
+            }).join('');
+
+            $('#achievementGrid').html(html);
+        }
+
+        function showAchievementToast(achievement) {
+            const toast = $(`
+                <div class="achievement-toast">
+                    <div class="toast-icon">
+                        <i class="bi ${achievement.icon}"></i>
+                    </div>
+                    <div class="toast-content">
+                        <h6>Achievement Unlocked!</h6>
+                        <p>${achievement.name}</p>
+                    </div>
+                </div>
+            `);
+            
+            if (!$('.toast-container').length) {
+                $('body').append('<div class="toast-container"></div>');
+            }
+            
+            $('.toast-container').append(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+
+        window.showAchievementToast = showAchievementToast;
+
+        $(document).ready(function() {
+            loadAchievements();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const newAchievements = urlParams.get('achievements');
+            if (newAchievements) {
+                try {
+                    const achievements = JSON.parse(decodeURIComponent(newAchievements));
+                    achievements.forEach(a => showAchievementToast(a));
+                } catch (e) {}
+                window.history.replaceState({}, '', '/profile');
             }
         });
     </script>
