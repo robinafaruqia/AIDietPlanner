@@ -103,6 +103,7 @@ const authRoutes = require('./routes/auth');
 const mealPlanRoutes = require('./routes/mealPlan');
 const nutritionRoutes = require('./routes/nutrition');
 const weightRoutes = require('./routes/weight');
+const favoritesRoutes = require('./routes/favorites');
 const { getAllConditions } = require('./config/healthConditions');
 
 app.use('/api/', apiLimiter);
@@ -110,6 +111,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/meal-plan', mealPlanRoutes);
 app.use('/api/nutrition', nutritionRoutes);
 app.use('/api/weight', weightRoutes);
+app.use('/api/favorites', favoritesRoutes);
 
 app.get('/api/health-conditions', (req, res) => {
   res.json({ success: true, conditions: getAllConditions() });

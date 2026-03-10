@@ -107,6 +107,55 @@
         .select2-container--bootstrap-5 .select2-selection {
             min-height: 38px;
         }
+        .diet-toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .diet-toggle-wrapper .label-nonveg,
+        .diet-toggle-wrapper .label-veg {
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: color 0.3s, opacity 0.3s;
+        }
+        .diet-toggle-wrapper .label-nonveg { color: #dc3545; }
+        .diet-toggle-wrapper .label-veg { color: #198754; }
+        .diet-toggle-wrapper .label-nonveg.active { opacity: 1; }
+        .diet-toggle-wrapper .label-nonveg.inactive { opacity: 0.4; }
+        .diet-toggle-wrapper .label-veg.active { opacity: 1; }
+        .diet-toggle-wrapper .label-veg.inactive { opacity: 0.4; }
+        .diet-switch {
+            position: relative;
+            width: 56px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+        .diet-switch input { opacity: 0; width: 0; height: 0; }
+        .diet-switch .slider {
+            position: absolute;
+            inset: 0;
+            cursor: pointer;
+            border-radius: 28px;
+            background-color: #dc3545;
+            transition: background-color 0.3s;
+        }
+        .diet-switch .slider::before {
+            content: '';
+            position: absolute;
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .diet-switch input:checked + .slider {
+            background-color: #198754;
+        }
+        .diet-switch input:checked + .slider::before {
+            transform: translateX(28px);
+        }
         .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
             background-color: #87CEEB;
             border: none;
@@ -129,6 +178,74 @@
         .select2-container--bootstrap-5 .select2-dropdown .select2-results__option--highlighted {
             background-color: #5cb8d6;
             color: white;
+        }
+        .btn-regenerate-day {
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.85);
+            padding: 4px 8px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .btn-regenerate-day:hover {
+            color: white;
+            transform: rotate(180deg);
+        }
+        .btn-regenerate-day:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-regenerate-day .spinner-border {
+            width: 1rem;
+            height: 1rem;
+        }
+        .btn-swap-meal {
+            background: transparent;
+            border: 1px solid #6c757d;
+            color: #6c757d;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .btn-swap-meal:hover {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-swap-meal:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-swap-meal .spinner-border {
+            width: 0.75rem;
+            height: 0.75rem;
+        }
+        .meal-card.loading-meal {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .day-card.loading-day .card-body {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .meal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .meal-header h6 {
+            margin-bottom: 0;
+        }
+        .meal-actions {
+            display: flex;
+            gap: 4px;
         }
     </style>
 </head>
@@ -181,6 +298,19 @@
                                         <label class="form-check-label" for="includeGroceryList">
                                             <i class="bi bi-cart"></i> Include Grocery List
                                         </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Diet Preference</label>
+                                    <div class="diet-toggle-wrapper">
+                                        <span class="label-nonveg active"><i class="bi bi-circle-fill" style="font-size:0.55rem;vertical-align:middle;margin-right:3px"></i>Non-Veg</span>
+                                        <label class="diet-switch">
+                                            <input type="checkbox" id="dietPrefToggle">
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="label-veg inactive"><i class="bi bi-circle-fill" style="font-size:0.55rem;vertical-align:middle;margin-right:3px"></i>Veg</span>
                                     </div>
                                 </div>
                             </div>
@@ -305,7 +435,23 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
+        const isUserLoggedIn = <%= user ? 'true' : 'false' %>;
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         $(document).ready(function() {
+            // Diet preference toggle label sync
+            $('#dietPrefToggle').on('change', function() {
+                const isVeg = $(this).is(':checked');
+                $('.label-veg').toggleClass('active', isVeg).toggleClass('inactive', !isVeg);
+                $('.label-nonveg').toggleClass('active', !isVeg).toggleClass('inactive', isVeg);
+            });
+
             // Initialize Select2 for health conditions
             $('#healthConditions').select2({
                 theme: 'bootstrap-5',
@@ -355,7 +501,8 @@
                         weight: parseFloat(weight),
                         height: parseFloat(height),
                         healthConditions: allConditions,
-                        includeGroceryList: includeGroceryList
+                        includeGroceryList: includeGroceryList,
+                        dietPreference: $('#dietPrefToggle').is(':checked') ? 'vegetarian' : 'non-vegetarian'
                     }),
                     success: function(response) {
                         stopLoadingAnimation();
@@ -436,6 +583,9 @@
                 const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                 const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
                 
+                // Store current meal plan for swap/regenerate operations
+                window.currentMealPlan = mealPlan;
+                
                 let weeklyPlanHtml = '';
                 days.forEach((day, index) => {
                     const dayPlan = mealPlan.weeklyPlan[day];
@@ -453,57 +603,93 @@
                         snacks.forEach((s, i) => window.mealData[`${day}_snack_${i}`] = s);
 
                         weeklyPlanHtml += `
-                            <div class="card mb-3">
-                                <div class="day-header">${dayNames[index]}</div>
+                            <div class="card mb-3 day-card" data-day="${day}" id="day-${day}">
+                                <div class="day-header">
+                                    <span>${dayNames[index]}</span>
+                                    <button class="btn-regenerate-day" data-day="${day}" title="Regenerate this day's meals">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </div>
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-6">
-                                            <div class="meal-card">
-                                                <h6><i class="bi bi-sunrise"></i> Breakfast
-                                                    <button class="btn btn-sm btn-outline-success float-end btn-log-meal" data-meal-key="${day}_breakfast" data-meal-type="breakfast" title="Log this meal">
-                                                        <i class="bi bi-plus-circle"></i>
-                                                    </button>
-                                                </h6>
-                                                <strong>${safeText(breakfast.name)}</strong>
-                                                <p class="mb-1"><small>${safeJoin(breakfast.ingredients)}</small></p>
-                                                <small class="text-muted">${safeNumber(breakfast.calories)} kcal | P: ${safeNumber(breakfast.protein)}g | C: ${safeNumber(breakfast.carbs)}g | F: ${safeNumber(breakfast.fat)}g</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="meal-card">
-                                                <h6><i class="bi bi-sun"></i> Lunch
-                                                    <button class="btn btn-sm btn-outline-success float-end btn-log-meal" data-meal-key="${day}_lunch" data-meal-type="lunch" title="Log this meal">
-                                                        <i class="bi bi-plus-circle"></i>
-                                                    </button>
-                                                </h6>
-                                                <strong>${safeText(lunch.name)}</strong>
-                                                <p class="mb-1"><small>${safeJoin(lunch.ingredients)}</small></p>
-                                                <small class="text-muted">${safeNumber(lunch.calories)} kcal | P: ${safeNumber(lunch.protein)}g | C: ${safeNumber(lunch.carbs)}g | F: ${safeNumber(lunch.fat)}g</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="meal-card">
-                                                <h6><i class="bi bi-moon"></i> Dinner
-                                                    <button class="btn btn-sm btn-outline-success float-end btn-log-meal" data-meal-key="${day}_dinner" data-meal-type="dinner" title="Log this meal">
-                                                        <i class="bi bi-plus-circle"></i>
-                                                    </button>
-                                                </h6>
-                                                <strong>${safeText(dinner.name)}</strong>
-                                                <p class="mb-1"><small>${safeJoin(dinner.ingredients)}</small></p>
-                                                <small class="text-muted">${safeNumber(dinner.calories)} kcal | P: ${safeNumber(dinner.protein)}g | C: ${safeNumber(dinner.carbs)}g | F: ${safeNumber(dinner.fat)}g</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="meal-card">
-                                                <h6><i class="bi bi-apple"></i> Snacks</h6>
-                                                ${snacks.map((snack, snackIdx) => `
-                                                    <div class="mb-2">
-                                                        <strong>${safeText(snack?.name)}</strong>
-                                                        <button class="btn btn-sm btn-outline-success float-end btn-log-meal" data-meal-key="${day}_snack_${snackIdx}" data-meal-type="snack" title="Log this snack">
+                                            <div class="meal-card" data-day="${day}" data-meal-type="breakfast" id="meal-${day}-breakfast">
+                                                <div class="meal-header">
+                                                    <h6><i class="bi bi-sunrise"></i> Breakfast</h6>
+                                                    <div class="meal-actions">
+                                                        <button class="btn-swap-meal" data-day="${day}" data-meal-type="breakfast" data-meal-name="${escapeHtml(breakfast.name || '')}" title="Swap meal">
+                                                            <i class="bi bi-arrow-repeat"></i>
+                                                        </button>
+                                                        ${isUserLoggedIn ? `<button class="btn btn-sm btn-outline-warning btn-save-favorite" data-meal-key="${day}_breakfast" data-meal-type="breakfast" title="Save to Favorites"><i class="bi bi-star"></i></button>` : ''}
+                                                        <button class="btn btn-sm btn-outline-success btn-log-meal" data-meal-key="${day}_breakfast" data-meal-type="breakfast" title="Log this meal">
                                                             <i class="bi bi-plus-circle"></i>
                                                         </button>
-                                                        <p class="mb-1"><small>${safeJoin(snack?.ingredients)}</small></p>
-                                                        <small class="text-muted">${safeNumber(snack?.calories)} kcal</small>
+                                                    </div>
+                                                </div>
+                                                <strong class="meal-name">${safeText(breakfast.name)}</strong>
+                                                <p class="mb-1 meal-ingredients"><small>${safeJoin(breakfast.ingredients)}</small></p>
+                                                <small class="text-muted meal-macros">${safeNumber(breakfast.calories)} kcal | P: ${safeNumber(breakfast.protein)}g | C: ${safeNumber(breakfast.carbs)}g | F: ${safeNumber(breakfast.fat)}g</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="meal-card" data-day="${day}" data-meal-type="lunch" id="meal-${day}-lunch">
+                                                <div class="meal-header">
+                                                    <h6><i class="bi bi-sun"></i> Lunch</h6>
+                                                    <div class="meal-actions">
+                                                        <button class="btn-swap-meal" data-day="${day}" data-meal-type="lunch" data-meal-name="${escapeHtml(lunch.name || '')}" title="Swap meal">
+                                                            <i class="bi bi-arrow-repeat"></i>
+                                                        </button>
+                                                        ${isUserLoggedIn ? `<button class="btn btn-sm btn-outline-warning btn-save-favorite" data-meal-key="${day}_lunch" data-meal-type="lunch" title="Save to Favorites"><i class="bi bi-star"></i></button>` : ''}
+                                                        <button class="btn btn-sm btn-outline-success btn-log-meal" data-meal-key="${day}_lunch" data-meal-type="lunch" title="Log this meal">
+                                                            <i class="bi bi-plus-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <strong class="meal-name">${safeText(lunch.name)}</strong>
+                                                <p class="mb-1 meal-ingredients"><small>${safeJoin(lunch.ingredients)}</small></p>
+                                                <small class="text-muted meal-macros">${safeNumber(lunch.calories)} kcal | P: ${safeNumber(lunch.protein)}g | C: ${safeNumber(lunch.carbs)}g | F: ${safeNumber(lunch.fat)}g</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="meal-card" data-day="${day}" data-meal-type="dinner" id="meal-${day}-dinner">
+                                                <div class="meal-header">
+                                                    <h6><i class="bi bi-moon"></i> Dinner</h6>
+                                                    <div class="meal-actions">
+                                                        <button class="btn-swap-meal" data-day="${day}" data-meal-type="dinner" data-meal-name="${escapeHtml(dinner.name || '')}" title="Swap meal">
+                                                            <i class="bi bi-arrow-repeat"></i>
+                                                        </button>
+                                                        ${isUserLoggedIn ? `<button class="btn btn-sm btn-outline-warning btn-save-favorite" data-meal-key="${day}_dinner" data-meal-type="dinner" title="Save to Favorites"><i class="bi bi-star"></i></button>` : ''}
+                                                        <button class="btn btn-sm btn-outline-success btn-log-meal" data-meal-key="${day}_dinner" data-meal-type="dinner" title="Log this meal">
+                                                            <i class="bi bi-plus-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <strong class="meal-name">${safeText(dinner.name)}</strong>
+                                                <p class="mb-1 meal-ingredients"><small>${safeJoin(dinner.ingredients)}</small></p>
+                                                <small class="text-muted meal-macros">${safeNumber(dinner.calories)} kcal | P: ${safeNumber(dinner.protein)}g | C: ${safeNumber(dinner.carbs)}g | F: ${safeNumber(dinner.fat)}g</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="meal-card" data-day="${day}" data-meal-type="snacks" id="meal-${day}-snacks">
+                                                <div class="meal-header">
+                                                    <h6><i class="bi bi-apple"></i> Snacks</h6>
+                                                </div>
+                                                ${snacks.map((snack, snackIdx) => `
+                                                    <div class="mb-2 snack-item" data-snack-idx="${snackIdx}">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <strong class="meal-name">${safeText(snack?.name)}</strong>
+                                                            <div class="meal-actions">
+                                                                <button class="btn-swap-meal" data-day="${day}" data-meal-type="snack" data-snack-idx="${snackIdx}" data-meal-name="${escapeHtml(snack?.name || '')}" title="Swap snack">
+                                                                    <i class="bi bi-arrow-repeat"></i>
+                                                                </button>
+                                                                ${isUserLoggedIn ? `<button class="btn btn-sm btn-outline-warning btn-save-favorite" data-meal-key="${day}_snack_${snackIdx}" data-meal-type="snack" title="Save to Favorites"><i class="bi bi-star"></i></button>` : ''}
+                                                                <button class="btn btn-sm btn-outline-success btn-log-meal" data-meal-key="${day}_snack_${snackIdx}" data-meal-type="snack" title="Log this snack">
+                                                                    <i class="bi bi-plus-circle"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <p class="mb-1 meal-ingredients"><small>${safeJoin(snack?.ingredients)}</small></p>
+                                                        <small class="text-muted meal-macros">${safeNumber(snack?.calories)} kcal</small>
                                                     </div>
                                                 `).join('')}
                                             </div>
@@ -584,14 +770,14 @@
                     scrollTop: $('#errorAlert').offset().top - 100
                 }, 300);
             }
+
+            // Expose functions globally for use outside $(document).ready()
+            window.safeText = safeText;
+            window.safeNumber = safeNumber;
+            window.safeJoin = safeJoin;
+            window.displayMealPlan = displayMealPlan;
+            window.showError = showError;
             
-            // Helper to escape HTML to prevent XSS
-            function escapeHtml(text) {
-                if (!text) return '';
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            }
         });
 
         // Log meal to nutrition tracker
@@ -649,6 +835,67 @@
             logMeal(mealKey, mealType);
         });
 
+        // Save meal to favorites
+        async function saveToFavorites(mealKey, mealType) {
+            const meal = window.mealData?.[mealKey];
+            if (!meal || !meal.name) {
+                alert('Meal data not found');
+                return;
+            }
+
+            try {
+                const response = await $.ajax({
+                    url: '/api/favorites',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        name: meal.name,
+                        mealType: mealType,
+                        calories: meal.calories || 0,
+                        protein: meal.protein || 0,
+                        carbs: meal.carbs || 0,
+                        fat: meal.fat || 0,
+                        fiber: meal.fiber || 0,
+                        ingredients: meal.ingredients || [],
+                        servingSize: '1 serving'
+                    })
+                });
+
+                if (response.success) {
+                    const toast = $(`
+                        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+                            <div class="toast show" role="alert">
+                                <div class="toast-header bg-warning text-dark">
+                                    <i class="bi bi-star-fill me-2"></i>
+                                    <strong class="me-auto">Saved to Favorites!</strong>
+                                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                                </div>
+                                <div class="toast-body">
+                                    ${escapeHtml(meal.name)} has been saved to your favorites.
+                                    <a href="/tracking" class="btn btn-sm btn-outline-warning mt-2">View Favorites</a>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                    $('body').append(toast);
+                    setTimeout(() => toast.remove(), 4000);
+                } else {
+                    alert('Failed to save to favorites: ' + (response.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Save favorite error:', error);
+                const msg = error.responseJSON?.error || 'Failed to save to favorites';
+                alert(msg);
+            }
+        }
+
+        // Event delegation for save to favorites buttons
+        $(document).on('click', '.btn-save-favorite', function() {
+            const mealKey = $(this).data('meal-key');
+            const mealType = $(this).data('meal-type');
+            saveToFavorites(mealKey, mealType);
+        });
+
         // Regenerate meal plan (force new AI generation)
         $(document).on('click', '#regenerateBtn', function() {
             const weight = $('#weight').val();
@@ -676,7 +923,8 @@
                     height: parseFloat(height),
                     healthConditions: allConditions,
                     includeGroceryList: includeGroceryList,
-                    forceRegenerate: true  // Force new AI generation
+                    forceRegenerate: true,
+                    dietPreference: $('#dietPrefToggle').is(':checked') ? 'vegetarian' : 'non-vegetarian'
                 }),
                 success: function(response) {
                     stopLoadingAnimation();
@@ -968,7 +1216,7 @@
                 }
             } catch (error) {
                 console.error('Error loading meal plan:', error);
-                alert('Failed to load meal plan');
+                alert('Failed to load meal plan in catch(' + error + ')');
             }
         });
 
@@ -1028,6 +1276,217 @@
                 alert('Failed to delete meal plan');
             }
         });
+
+        // Regenerate a single day's meals
+        $(document).on('click', '.btn-regenerate-day', async function() {
+            const $btn = $(this);
+            const day = $btn.data('day');
+            const $dayCard = $(`#day-${day}`);
+            
+            if ($btn.prop('disabled')) return;
+            
+            const weight = $('#weight').val() || window.currentMealPlan?.weight;
+            const height = $('#height').val() || window.currentMealPlan?.height;
+            const healthConditions = $('#healthConditions').val() || window.currentMealPlan?.healthConditions || [];
+            const customCondition = $('#customCondition').val()?.trim();
+            let allConditions = [...healthConditions];
+            if (customCondition) allConditions.push(customCondition);
+            
+            if (!weight || !height) {
+                alert('Please ensure weight and height are set');
+                return;
+            }
+            
+            // Show loading state
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+            $dayCard.addClass('loading-day');
+            
+            try {
+                const response = await $.ajax({
+                    url: '/api/meal-plan/regenerate-day',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        weight: parseFloat(weight),
+                        height: parseFloat(height),
+                        healthConditions: allConditions,
+                        dayName: day,
+                        dietPreference: $('#dietPrefToggle').is(':checked') ? 'vegetarian' : 'non-vegetarian'
+                    })
+                });
+                
+                if (response.success) {
+                    // Update the meal plan data
+                    window.currentMealPlan.weeklyPlan[day] = response.dayPlan;
+                    
+                    // Update meal data for logging
+                    window.mealData[`${day}_breakfast`] = response.dayPlan.breakfast;
+                    window.mealData[`${day}_lunch`] = response.dayPlan.lunch;
+                    window.mealData[`${day}_dinner`] = response.dayPlan.dinner;
+                    response.dayPlan.snacks.forEach((s, i) => window.mealData[`${day}_snack_${i}`] = s);
+                    
+                    // Update UI in place
+                    updateDayUI(day, response.dayPlan);
+                    
+                    // Show success toast
+                    showToast('success', 'Day Regenerated!', `${capitalizeFirst(day)}'s meals have been updated.`);
+                }
+            } catch (error) {
+                console.error('Regenerate day error:', error);
+                const msg = error.responseJSON?.error || 'Failed to regenerate day';
+                showToast('danger', 'Error', msg);
+            } finally {
+                $btn.prop('disabled', false).html('<i class="bi bi-arrow-clockwise"></i>');
+                $dayCard.removeClass('loading-day');
+            }
+        });
+        
+        // Swap a single meal
+        $(document).on('click', '.btn-swap-meal', async function() {
+            const $btn = $(this);
+            const day = $btn.data('day');
+            const mealType = $btn.data('meal-type');
+            const currentMealName = $btn.data('meal-name');
+            const snackIdx = $btn.data('snack-idx');
+            
+            if ($btn.prop('disabled')) return;
+            
+            const weight = $('#weight').val() || window.currentMealPlan?.weight;
+            const height = $('#height').val() || window.currentMealPlan?.height;
+            const healthConditions = $('#healthConditions').val() || window.currentMealPlan?.healthConditions || [];
+            const customCondition = $('#customCondition').val()?.trim();
+            let allConditions = [...healthConditions];
+            if (customCondition) allConditions.push(customCondition);
+            
+            if (!weight || !height) {
+                alert('Please ensure weight and height are set');
+                return;
+            }
+            
+            // Get the meal card element
+            const $mealCard = mealType === 'snack' 
+                ? $btn.closest('.snack-item')
+                : $btn.closest('.meal-card');
+            
+            // Show loading state
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+            $mealCard.addClass('loading-meal');
+            
+            try {
+                const response = await $.ajax({
+                    url: '/api/meal-plan/swap-meal',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        weight: parseFloat(weight),
+                        height: parseFloat(height),
+                        healthConditions: allConditions,
+                        mealType: mealType,
+                        currentMealName: currentMealName,
+                        dietPreference: $('#dietPrefToggle').is(':checked') ? 'vegetarian' : 'non-vegetarian'
+                    })
+                });
+                
+                if (response.success) {
+                    // Update meal plan data
+                    if (mealType === 'snack' && snackIdx !== undefined) {
+                        window.currentMealPlan.weeklyPlan[day].snacks[snackIdx] = response.meal;
+                        window.mealData[`${day}_snack_${snackIdx}`] = response.meal;
+                    } else {
+                        window.currentMealPlan.weeklyPlan[day][mealType] = response.meal;
+                        window.mealData[`${day}_${mealType}`] = response.meal;
+                    }
+                    
+                    // Update UI in place
+                    updateMealUI(day, mealType, response.meal, snackIdx);
+                    
+                    // Update the button's data-meal-name for next swap
+                    $btn.data('meal-name', response.meal.name);
+                    
+                    // Show success toast
+                    showToast('success', 'Meal Swapped!', `Now: ${response.meal.name}`);
+                }
+            } catch (error) {
+                console.error('Swap meal error:', error);
+                const msg = error.responseJSON?.error || 'Failed to swap meal';
+                showToast('danger', 'Error', msg);
+            } finally {
+                $btn.prop('disabled', false).html('<i class="bi bi-arrow-repeat"></i>');
+                $mealCard.removeClass('loading-meal');
+            }
+        });
+        
+        // Update a full day's UI
+        function updateDayUI(day, dayPlan) {
+            updateMealUI(day, 'breakfast', dayPlan.breakfast);
+            updateMealUI(day, 'lunch', dayPlan.lunch);
+            updateMealUI(day, 'dinner', dayPlan.dinner);
+            
+            // Update snacks
+            const $snacksCard = $(`#meal-${day}-snacks`);
+            const snacksHtml = dayPlan.snacks.map((snack, snackIdx) => `
+                <div class="mb-2 snack-item" data-snack-idx="${snackIdx}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong class="meal-name">${escapeHtml(snack?.name || '')}</strong>
+                        <div class="meal-actions">
+                            <button class="btn-swap-meal" data-day="${day}" data-meal-type="snack" data-snack-idx="${snackIdx}" data-meal-name="${escapeHtml(snack?.name || '')}" title="Swap snack">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success btn-log-meal" data-meal-key="${day}_snack_${snackIdx}" data-meal-type="snack" title="Log this snack">
+                                <i class="bi bi-plus-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="mb-1 meal-ingredients"><small>${(snack?.ingredients || []).map(i => escapeHtml(i)).join(', ')}</small></p>
+                    <small class="text-muted meal-macros">${snack?.calories || 0} kcal</small>
+                </div>
+            `).join('');
+            
+            $snacksCard.find('.snack-item').remove();
+            $snacksCard.find('.meal-header').after(snacksHtml);
+        }
+        
+        // Update a single meal's UI
+        function updateMealUI(day, mealType, meal, snackIdx) {
+            if (mealType === 'snack' && snackIdx !== undefined) {
+                const $snackItem = $(`#meal-${day}-snacks .snack-item[data-snack-idx="${snackIdx}"]`);
+                $snackItem.find('.meal-name').text(meal.name || '');
+                $snackItem.find('.meal-ingredients small').text((meal.ingredients || []).join(', '));
+                $snackItem.find('.meal-macros').text(`${meal.calories || 0} kcal`);
+                return;
+            }
+            
+            const $mealCard = $(`#meal-${day}-${mealType}`);
+            $mealCard.find('.meal-name').text(meal.name || '');
+            $mealCard.find('.meal-ingredients small').text((meal.ingredients || []).join(', '));
+            $mealCard.find('.meal-macros').text(
+                `${meal.calories || 0} kcal | P: ${meal.protein || 0}g | C: ${meal.carbs || 0}g | F: ${meal.fat || 0}g`
+            );
+        }
+        
+        // Helper to capitalize first letter
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+        
+        // Toast notification helper
+        function showToast(type, title, message) {
+            const bgClass = type === 'success' ? 'bg-success' : (type === 'danger' ? 'bg-danger' : 'bg-info');
+            const toast = $(`
+                <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+                    <div class="toast show" role="alert">
+                        <div class="toast-header ${bgClass} text-white">
+                            <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                            <strong class="me-auto">${escapeHtml(title)}</strong>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                        </div>
+                        <div class="toast-body">${escapeHtml(message)}</div>
+                    </div>
+                </div>
+            `);
+            $('body').append(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
     </script>
 </body>
 </html>

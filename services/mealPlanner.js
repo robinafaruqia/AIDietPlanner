@@ -220,14 +220,13 @@ function generateGroceryList(weeklyPlan) {
 }
 
 
-async function generateWeeklyMealPlan(weight, height, healthConditions, includeGroceryList = true) {
+async function generateWeeklyMealPlan(weight, height, healthConditions, includeGroceryList = true, dietPreference = 'non-vegetarian') {
   const dailyCalories = calculateDailyCalories(weight, height);
   
-  // Create cache key (include all conditions and grocery list option)
   const conditionKey = healthConditions && healthConditions.length > 0 
     ? healthConditions.map(c => c.toLowerCase()).sort().join('|')
     : 'none';
-  const cacheKey = `${weight}_${height}_${conditionKey}_${includeGroceryList}`;
+  const cacheKey = `${weight}_${height}_${conditionKey}_${includeGroceryList}_${dietPreference}`;
   
   // Check cache (Redis with memory fallback)
   const cached = await getFromCache(cacheKey);
@@ -240,7 +239,7 @@ async function generateWeeklyMealPlan(weight, height, healthConditions, includeG
   if (isInitialized() && process.env.GEMINI_API_KEY) {
     try {
       console.log('🤖 Generating meal plan with AI...');
-      const aiResponse = await generateMealPlanWithAI(weight, height, healthConditions, dailyCalories);
+      const aiResponse = await generateMealPlanWithAI(weight, height, healthConditions, dailyCalories, dietPreference);
       const { weeklyPlan: aiWeeklyPlan, groceryList: aiGroceryList } = aiResponse;
       
       // Calculate total calories

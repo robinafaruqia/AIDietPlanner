@@ -175,8 +175,11 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-header bg-white">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-list-ul"></i> Weight Log</h5>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="exportWeightCSV()">
+                            <i class="bi bi-download"></i> Export CSV
+                        </button>
                     </div>
                     <div class="card-body p-0">
                         <div class="history-table">
@@ -281,16 +284,23 @@
         async function loadStats() {
             try {
                 const response = await $.get('/api/weight/stats');
+                console.log('Weight stats response:', response);
+                
                 if (response.success && response.stats) {
                     const s = response.stats;
+                    console.log('Stats data:', s);
+                    
                     $('#startWeight').text(s.startWeight ? s.startWeight + ' kg' : '--');
                     $('#currentWeight').text(s.currentWeight ? s.currentWeight + ' kg' : '--');
                     $('#targetWeight').text(s.targetWeight ? s.targetWeight + ' kg' : '--');
                     
-                    if (s.lost !== null) {
+                    // Show progress (lost weight) - check for both null and undefined
+                    if (s.lost !== null && s.lost !== undefined) {
                         const prefix = s.lost > 0 ? '-' : '+';
                         const color = s.lost > 0 ? '#22c55e' : '#ef4444';
                         $('#weightLost').html(`<span style="color: ${color}">${prefix}${Math.abs(s.lost)} kg</span>`);
+                    } else {
+                        $('#weightLost').text('--');
                     }
 
                     let quickHtml = '';
@@ -320,6 +330,15 @@
                         
                         updateProgressChart(s.percentToGoal);
                     }
+                } else if (response.success && !response.stats) {
+                    console.log('No weight stats yet:', response.message);
+                    // Reset all fields to default
+                    $('#startWeight').text('--');
+                    $('#currentWeight').text('--');
+                    $('#targetWeight').text('--');
+                    $('#weightLost').text('--');
+                    $('#quickStats').html('');
+                    $('#progressCard').hide();
                 }
             } catch (error) {
                 console.error('Error loading stats:', error);
@@ -521,6 +540,10 @@
             } catch (error) {
                 alert(error.responseJSON?.error || 'Failed to delete entry');
             }
+        }
+
+        function exportWeightCSV() {
+            window.location.href = '/api/weight/export/csv';
         }
 
     </script>

@@ -41,7 +41,10 @@ function initializePassport() {
 
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const googleCallbackUrl = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback';
+     const isProduction = process.env.NODE_ENV === 'production';
+  const googleCallbackUrl = isProduction
+    ? process.env.GOOGLE_CALLBACK_URL
+    : `http://localhost:${process.env.PORT || 3000}/api/auth/google/callback`;
 
   if (googleClientId && googleClientSecret) {
     passport.use(new GoogleStrategy(

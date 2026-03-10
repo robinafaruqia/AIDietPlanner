@@ -234,4 +234,36 @@ router.put('/entry/:entryId', apiAuth, async (req, res) => {
   }
 });
 
+router.get('/export/csv', apiAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    
+    if (!user.weightHistory || user.weightHistory.length === 0) {
+      return res.status(404).json({ error: 'No weight history to export' });
+    }
+
+    const sortedHistory = [...user.weightHistory].sort(
+      (a, b) => new Date(a.date) - new Date(b.date)
+    );
+
+    const csvRows = ['Date,Weight (kg),Note'];
+    
+    sortedHistory.forEach(entry => {
+      const dateStr = new Date(entry.date).toISOString().split('T')[0];
+      const note = entry.note ? `"${entry.note.replace(/"/g, '""')}"` : '';
+      csvRows.push(`${dateStr},${entry.weight},${note}`);
+    });
+
+    const csv = csvRows.join('\n');
+    const filename = `weight-history-${new Date().toISOString().split('T')[0]}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting weight history:', error);
+    res.status(500).json({ error: 'Failed to export weight history' });
+  }
+});
+
 module.exports = router;

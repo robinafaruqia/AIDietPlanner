@@ -3,6 +3,8 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const NutritionLog = require('../models/NutritionLog');
 const { optionalAuth } = require('../middleware/auth');
+const https = require('https');
+const http = require('http');
 
 function getDateString(date = new Date()) {
   const year = date.getFullYear();
@@ -532,6 +534,153 @@ router.get('/summary/weekly', async (req, res) => {
   } catch (error) {
     console.error('Error getting weekly summary:', error);
     res.status(500).json({ error: 'Failed to get weekly summary' });
+  }
+});
+
+router.get('/export/csv', async (req, res) => {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 365);
+    
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: 'Database not connected' });
+    }
+
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const userId = getUserId(req);
+    const query = buildQuery(userId, {
+      date: { $gte: startDate, $lte: endDate }
+    });
+
+    const logs = await NutritionLog.find(query).sort({ date: -1 });
+
+    const csvRows = ['Date,Meal Type,Food Name,Calories,Protein,Carbs,Fat,Fiber'];
+    
+    logs.forEach(log => {
+      if (log.meals && log.meals.length > 0) {
+        log.meals.forEach(meal => {
+          const row = [
+            log.dateString,
+            meal.mealType || '',
+            `"${(meal.name || '').replace(/"/g, '""')}"`,
+            meal.calories || 0,
+            meal.protein || 0,
+            meal.carbs || 0,
+            meal.fat || 0,
+            meal.fiber || 0
+          ];
+          csvRows.push(row.join(','));
+        });
+      }
+    });
+
+    const csv = csvRows.join('\n');
+    const filename = `nutrition-log-${getDateString()}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting nutrition data:', error);
+    res.status(500).json({ error: 'Failed to export nutrition data' });
+  }
+});
+
+router.get('/barcode/:code', async (req, res) => {
+  try {
+    const barcode = req.params.code;
+    
+    if (!barcode || !/^\d{8,14}$/.test(barcode)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid barcode format. Expected 8-14 digits (UPC/EAN).' 
+      });
+    }
+
+    const openFoodFactsUrl = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
+
+    const fetchProduct = () => {
+      return new Promise((resolve, reject) => {
+        https.get(openFoodFactsUrl, {
+          headers: {
+            'User-Agent': 'AIDietPlanner/1.0 (https://github.com/aidietplanner)'
+          }
+        }, (response) => {
+          let data = '';
+          
+          response.on('data', chunk => {
+            data += chunk;
+          });
+          
+          response.on('end', () => {
+            try {
+              resolve(JSON.parse(data));
+            } catch (e) {
+              reject(new Error('Invalid response from Open Food Facts'));
+            }
+          });
+        }).on('error', reject);
+      });
+    };
+
+    const apiResponse = await fetchProduct();
+
+    if (apiResponse.status === 0 || !apiResponse.product) {
+      return res.json({ 
+        success: false, 
+        error: 'Product not found in Open Food Facts database',
+        barcode 
+      });
+    }
+
+    const product = apiResponse.product;
+    const nutriments = product.nutriments || {};
+
+    const servingSize = product.serving_size || product.quantity || '100g';
+    const hasServingData = product.serving_size && nutriments['energy-kcal_serving'];
+
+    let calories, protein, carbs, fat, fiber;
+
+    if (hasServingData) {
+      calories = Math.round(nutriments['energy-kcal_serving'] || 0);
+      protein = Math.round(nutriments.proteins_serving || 0);
+      carbs = Math.round(nutriments.carbohydrates_serving || 0);
+      fat = Math.round(nutriments.fat_serving || 0);
+      fiber = Math.round(nutriments.fiber_serving || 0);
+    } else {
+      calories = Math.round(nutriments['energy-kcal_100g'] || nutriments['energy-kcal'] || 0);
+      protein = Math.round(nutriments.proteins_100g || nutriments.proteins || 0);
+      carbs = Math.round(nutriments.carbohydrates_100g || nutriments.carbohydrates || 0);
+      fat = Math.round(nutriments.fat_100g || nutriments.fat || 0);
+      fiber = Math.round(nutriments.fiber_100g || nutriments.fiber || 0);
+    }
+
+    const productData = {
+      success: true,
+      barcode,
+      name: product.product_name || product.product_name_en || 'Unknown Product',
+      brand: product.brands || '',
+      calories,
+      protein,
+      carbs,
+      fat,
+      fiber,
+      servingSize: hasServingData ? servingSize : `100g (${servingSize})`,
+      image: product.image_small_url || product.image_url || null,
+      categories: product.categories || '',
+      nutriscore: product.nutriscore_grade || null
+    };
+
+    res.json(productData);
+
+  } catch (error) {
+    console.error('Error fetching barcode data:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch product information. Please try again.' 
+    });
   }
 });
 

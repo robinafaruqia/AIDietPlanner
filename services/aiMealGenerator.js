@@ -75,15 +75,80 @@ function initializeGemini() {
 // Initialize on module load
 isInitialized = initializeGemini();
 
-function createMealPlanPrompt(weight, height, healthConditions, dailyCalories) {
+function createSingleDayPrompt(weight, height, healthConditions, dailyCalories, dayName, dietPreference = 'non-vegetarian') {
+  const conditionsList = healthConditions && healthConditions.length > 0 ? healthConditions : [];
+  const conditionNames = conditionsList.length > 0 ? conditionsList.join(', ') : 'none';
+  const guidelines = conditionsList.map(c => getGuidelinesForCondition(c)).join(' ')
+    || getGuidelinesForCondition(null);
+
+  const isVeg = dietPreference === 'vegetarian';
+  const dietLabel = isVeg ? 'Vegetarian' : 'Non-Vegetarian';
+  const dietRule = isVeg
+    ? 'ALL meals MUST be vegetarian. No meat, poultry, fish, or seafood.'
+    : 'Meals can include both vegetarian and non-vegetarian options.';
+
+  return `Generate meals for ${dayName} only. Return JSON with breakfast, lunch, dinner, and snacks.
+
+User: ${weight}kg, ${height}cm, Conditions: ${conditionNames}, Target: ${dailyCalories} kcal/day, Diet: ${dietLabel}
+Guidelines: ${guidelines}
+Diet Rule: ${dietRule}
+
+Return ONLY valid JSON (no markdown):
+{
+  "breakfast": {"name": "...", "ingredients": ["..."], "calories": 300, "protein": 20, "carbs": 40, "fat": 10, "fiber": 5},
+  "lunch": {"name": "...", "ingredients": ["..."], "calories": 500, "protein": 30, "carbs": 50, "fat": 15, "fiber": 8},
+  "dinner": {"name": "...", "ingredients": ["..."], "calories": 500, "protein": 30, "carbs": 50, "fat": 15, "fiber": 8},
+  "snacks": [{"name": "...", "ingredients": ["..."], "calories": 150, "protein": 5, "carbs": 20, "fat": 5, "fiber": 3}]
+}`;
+}
+
+function createSwapMealPrompt(weight, height, healthConditions, mealType, currentMealName, dailyCalories, dietPreference = 'non-vegetarian') {
+  const conditionsList = healthConditions && healthConditions.length > 0 ? healthConditions : [];
+  const conditionNames = conditionsList.length > 0 ? conditionsList.join(', ') : 'none';
+  const guidelines = conditionsList.map(c => getGuidelinesForCondition(c)).join(' ')
+    || getGuidelinesForCondition(null);
+
+  const isVeg = dietPreference === 'vegetarian';
+  const dietLabel = isVeg ? 'Vegetarian' : 'Non-Vegetarian';
+  const dietRule = isVeg
+    ? 'The meal MUST be vegetarian. No meat, poultry, fish, or seafood.'
+    : 'The meal can be vegetarian or non-vegetarian.';
+
+  const calorieTargets = {
+    breakfast: Math.round(dailyCalories * 0.25),
+    lunch: Math.round(dailyCalories * 0.35),
+    dinner: Math.round(dailyCalories * 0.30),
+    snack: Math.round(dailyCalories * 0.10)
+  };
+  const targetCals = calorieTargets[mealType] || 400;
+
+  return `Generate ONE alternative ${mealType} meal to replace "${currentMealName}".
+
+User: ${weight}kg, ${height}cm, Conditions: ${conditionNames}, Diet: ${dietLabel}
+Target calories for this ${mealType}: ~${targetCals} kcal
+Guidelines: ${guidelines}
+Diet Rule: ${dietRule}
+
+Provide a DIFFERENT meal with similar nutritional value but different ingredients/cuisine.
+
+Return ONLY valid JSON (no markdown):
+{"name": "...", "ingredients": ["..."], "calories": ${targetCals}, "protein": 20, "carbs": 40, "fat": 10, "fiber": 5}`;
+}
+
+function createMealPlanPrompt(weight, height, healthConditions, dailyCalories, dietPreference = 'non-vegetarian') {
   const conditionsList = healthConditions && healthConditions.length > 0 ? healthConditions : [];
   const conditionNames = conditionsList.length > 0 ? conditionsList.join(', ') : 'none';
   const guidelines = conditionsList.map(c => getGuidelinesForCondition(c)).join(' ')
     || getGuidelinesForCondition(null);
   
-  // Calculate BMI for context
   const heightInMeters = height / 100;
   const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(1);
+
+  const isVeg = dietPreference === 'vegetarian';
+  const dietLabel = isVeg ? 'Vegetarian (no meat, poultry, or fish)' : 'Non-Vegetarian';
+  const dietRule = isVeg
+    ? 'ALL meals and snacks MUST be 100% vegetarian. Do NOT include any meat, poultry, fish, or seafood. Use plant-based proteins (lentils, beans, chickpeas, tofu, paneer, nuts, seeds, dairy, eggs) instead.'
+    : 'Meals can include both vegetarian and non-vegetarian options.';
 
   return `You are a professional nutritionist. Generate a detailed weekly meal plan (7 days) in JSON format.
 
@@ -93,12 +158,14 @@ User Profile:
 - BMI: ${bmi}
 - Health Condition(s): ${conditionNames}
 - Target Daily Calories: ${dailyCalories} kcal
+- Diet Preference: ${dietLabel}
 - Dietary Guidelines: ${guidelines}
 
 Requirements:
 1. Generate meals for all 7 days (Monday through Sunday)
 2. Each day must have: breakfast, lunch, dinner, and snacks (1-2 snacks per day)
-3. Each meal must include:
+3. IMPORTANT DIET RULE: ${dietRule}
+4. Each meal must include:
    - name: Meal name (string)
    - ingredients: Array of ingredient names (strings)
    - calories: Number (integer)
@@ -107,12 +174,12 @@ Requirements:
    - fat: Number in grams (integer)
    - fiber: Number in grams (integer, optional)
 
-4. Ensure daily totals are approximately ${dailyCalories} calories
-5. Follow the dietary guidelines for the health condition
-6. Provide variety across the week
-7. Use common, accessible ingredients
+5. Ensure daily totals are approximately ${dailyCalories} calories
+6. Follow the dietary guidelines for the health condition
+7. Provide variety across the week
+8. Use common, accessible ingredients
 
-8. Generate a consolidated grocery list with all unique ingredients categorized
+9. Generate a consolidated grocery list with all unique ingredients categorized
 
 Return ONLY valid JSON in this exact format (no markdown, no code blocks, just JSON):
 {
@@ -295,7 +362,7 @@ async function callModelWithRetry(modelName, prompt, retries = 1) {
   throw lastError;
 }
 
-async function generateMealPlanWithAI(weight, height, healthConditions, dailyCalories) {
+async function generateMealPlanWithAI(weight, height, healthConditions, dailyCalories, dietPreference = 'non-vegetarian') {
   if (!process.env.GEMINI_API_KEY) {
     throw createUserFriendlyError('NO_API_KEY');
   }
@@ -303,7 +370,7 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
     throw createUserFriendlyError('NOT_INITIALIZED');
   }
 
-  const prompt = createMealPlanPrompt(weight, height, healthConditions, dailyCalories);
+  const prompt = createMealPlanPrompt(weight, height, healthConditions, dailyCalories, dietPreference);
   const modelChain = getAvailableModelChain();
 
   console.log(`🤖 Generating meal plan — will try up to ${modelChain.length} models`);
@@ -404,10 +471,125 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
   throw lastError || createUserFriendlyError('API_ERROR', 'All AI models are currently unavailable. Please try again in a few minutes.');
 }
 
+async function regenerateSingleDay(weight, height, healthConditions, dailyCalories, dayName, dietPreference = 'non-vegetarian') {
+  if (!process.env.GEMINI_API_KEY) {
+    throw createUserFriendlyError('NO_API_KEY');
+  }
+  if (!isInitialized || !ai) {
+    throw createUserFriendlyError('NOT_INITIALIZED');
+  }
+
+  const prompt = createSingleDayPrompt(weight, height, healthConditions, dailyCalories, dayName, dietPreference);
+  const modelChain = getAvailableModelChain();
+
+  console.log(`🔄 Regenerating ${dayName} — trying up to ${modelChain.length} models`);
+
+  let lastError;
+
+  for (const modelName of modelChain) {
+    try {
+      const text = await callModelWithRetry(modelName, prompt);
+      console.log(`✅ ${modelName} responded for day regen (${text.length} chars)`);
+
+      let jsonText = text.trim();
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      let dayData;
+      try {
+        dayData = JSON.parse(jsonText);
+      } catch (parseError) {
+        console.error(`❌ JSON parse error from ${modelName}:`, parseError.message);
+        lastError = createUserFriendlyError('INVALID_RESPONSE', 'AI response was not valid JSON.');
+        continue;
+      }
+
+      if (!dayData.breakfast || !dayData.lunch || !dayData.dinner || !Array.isArray(dayData.snacks)) {
+        lastError = createUserFriendlyError('INVALID_RESPONSE', 'Missing required meal fields');
+        continue;
+      }
+
+      console.log(`✅ Day "${dayName}" regenerated successfully`);
+      return dayData;
+
+    } catch (error) {
+      lastError = error;
+      const errorType = error.errorCode || classifyError(error);
+      if (['NO_API_KEY', 'QUOTA_EXCEEDED', 'NOT_INITIALIZED'].includes(errorType)) {
+        throw error.errorCode ? error : createUserFriendlyError(errorType, error.message);
+      }
+      console.log(`   ↪ Skipping ${modelName}, trying next model...`);
+    }
+  }
+
+  throw lastError || createUserFriendlyError('API_ERROR', 'All AI models are currently unavailable.');
+}
+
+async function swapMeal(weight, height, healthConditions, mealType, currentMealName, dailyCalories, dietPreference = 'non-vegetarian') {
+  if (!process.env.GEMINI_API_KEY) {
+    throw createUserFriendlyError('NO_API_KEY');
+  }
+  if (!isInitialized || !ai) {
+    throw createUserFriendlyError('NOT_INITIALIZED');
+  }
+
+  const prompt = createSwapMealPrompt(weight, height, healthConditions, mealType, currentMealName, dailyCalories, dietPreference);
+  const modelChain = getAvailableModelChain();
+
+  console.log(`🔄 Swapping ${mealType} "${currentMealName}" — trying up to ${modelChain.length} models`);
+
+  let lastError;
+
+  for (const modelName of modelChain) {
+    try {
+      const text = await callModelWithRetry(modelName, prompt);
+      console.log(`✅ ${modelName} responded for meal swap (${text.length} chars)`);
+
+      let jsonText = text.trim();
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      let mealData;
+      try {
+        mealData = JSON.parse(jsonText);
+      } catch (parseError) {
+        console.error(`❌ JSON parse error from ${modelName}:`, parseError.message);
+        lastError = createUserFriendlyError('INVALID_RESPONSE', 'AI response was not valid JSON.');
+        continue;
+      }
+
+      if (!mealData.name || !Array.isArray(mealData.ingredients)) {
+        lastError = createUserFriendlyError('INVALID_RESPONSE', 'Missing required meal fields');
+        continue;
+      }
+
+      console.log(`✅ Meal swap successful: "${mealData.name}"`);
+      return mealData;
+
+    } catch (error) {
+      lastError = error;
+      const errorType = error.errorCode || classifyError(error);
+      if (['NO_API_KEY', 'QUOTA_EXCEEDED', 'NOT_INITIALIZED'].includes(errorType)) {
+        throw error.errorCode ? error : createUserFriendlyError(errorType, error.message);
+      }
+      console.log(`   ↪ Skipping ${modelName}, trying next model...`);
+    }
+  }
+
+  throw lastError || createUserFriendlyError('API_ERROR', 'All AI models are currently unavailable.');
+}
+
 module.exports = {
   generateMealPlanWithAI,
+  regenerateSingleDay,
+  swapMeal,
   isInitialized: () => isInitialized,
-  // For debugging
   getStatus: () => ({
     initialized: isInitialized,
     hasApiKey: !!process.env.GEMINI_API_KEY,

@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const MealPlan = require('../models/MealPlan');
-const { generateWeeklyMealPlan } = require('../services/mealPlanner');
+const { generateWeeklyMealPlan, calculateDailyCalories } = require('../services/mealPlanner');
+const { regenerateSingleDay, swapMeal } = require('../services/aiMealGenerator');
 const { optionalAuth } = require('../middleware/auth');
 
 function parseFiniteNumber(value) {
@@ -65,7 +66,7 @@ router.use(optionalAuth);
 
 router.post('/generate', async (req, res) => {
   try {
-    const { weight, height, healthConditions, includeGroceryList, forceRegenerate } = req.body || {};
+    const { weight, height, healthConditions, includeGroceryList, forceRegenerate, dietPreference } = req.body || {};
 
     const parsedWeight = parseFiniteNumber(weight);
     if (parsedWeight === null || parsedWeight <= 0) {
@@ -79,6 +80,8 @@ router.post('/generate', async (req, res) => {
 
     const conditions = normalizeHealthConditions(healthConditions);
     const includeList = parseBoolean(includeGroceryList, true);
+    const validDietPrefs = ['vegetarian', 'non-vegetarian'];
+    const diet = validDietPrefs.includes(dietPreference) ? dietPreference : 'non-vegetarian';
     const userId = getUserId(req);
 
     const startTime = Date.now();
@@ -115,7 +118,8 @@ router.post('/generate', async (req, res) => {
       parsedWeight,
       parsedHeight,
       conditions,
-      includeList
+      includeList,
+      diet
     );
     
     const generationTime = Date.now() - startTime;
@@ -166,6 +170,119 @@ function getErrorHelp(errorCode) {
   
   return helpText[errorCode] || 'Please try again. If the problem persists, contact support.';
 }
+
+router.post('/regenerate-day', async (req, res) => {
+  try {
+    const { weight, height, healthConditions, dayName, dietPreference } = req.body || {};
+
+    const parsedWeight = parseFiniteNumber(weight);
+    if (parsedWeight === null || parsedWeight <= 0) {
+      return res.status(400).json({ error: 'Valid weight is required' });
+    }
+
+    const parsedHeight = parseFiniteNumber(height);
+    if (parsedHeight === null || parsedHeight <= 0) {
+      return res.status(400).json({ error: 'Valid height is required' });
+    }
+
+    const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const normalizedDay = (dayName || '').toLowerCase().trim();
+    if (!validDays.includes(normalizedDay)) {
+      return res.status(400).json({ error: 'Valid day name is required (monday-sunday)' });
+    }
+
+    const conditions = normalizeHealthConditions(healthConditions);
+    const validDietPrefs = ['vegetarian', 'non-vegetarian'];
+    const diet = validDietPrefs.includes(dietPreference) ? dietPreference : 'non-vegetarian';
+
+    const dailyCalories = calculateDailyCalories(parsedWeight, parsedHeight);
+
+    console.log(`🔄 Regenerating ${normalizedDay} for user: ${parsedWeight}kg, ${parsedHeight}cm`);
+
+    const dayData = await regenerateSingleDay(
+      parsedWeight,
+      parsedHeight,
+      conditions,
+      dailyCalories,
+      normalizedDay,
+      diet
+    );
+
+    res.json({
+      success: true,
+      dayName: normalizedDay,
+      dayPlan: dayData
+    });
+
+  } catch (error) {
+    console.error('❌ Error regenerating day:', error);
+    res.status(500).json({
+      error: error.userMessage || 'Failed to regenerate day',
+      details: error.userDetails || error.message,
+      code: error.errorCode || 'UNKNOWN_ERROR',
+      help: getErrorHelp(error.errorCode)
+    });
+  }
+});
+
+router.post('/swap-meal', async (req, res) => {
+  try {
+    const { weight, height, healthConditions, mealType, currentMealName, dietPreference } = req.body || {};
+
+    const parsedWeight = parseFiniteNumber(weight);
+    if (parsedWeight === null || parsedWeight <= 0) {
+      return res.status(400).json({ error: 'Valid weight is required' });
+    }
+
+    const parsedHeight = parseFiniteNumber(height);
+    if (parsedHeight === null || parsedHeight <= 0) {
+      return res.status(400).json({ error: 'Valid height is required' });
+    }
+
+    const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+    const normalizedMealType = (mealType || '').toLowerCase().trim();
+    if (!validMealTypes.includes(normalizedMealType)) {
+      return res.status(400).json({ error: 'Valid meal type is required (breakfast, lunch, dinner, snack)' });
+    }
+
+    if (!currentMealName || typeof currentMealName !== 'string' || !currentMealName.trim()) {
+      return res.status(400).json({ error: 'Current meal name is required' });
+    }
+
+    const conditions = normalizeHealthConditions(healthConditions);
+    const validDietPrefs = ['vegetarian', 'non-vegetarian'];
+    const diet = validDietPrefs.includes(dietPreference) ? dietPreference : 'non-vegetarian';
+
+    const dailyCalories = calculateDailyCalories(parsedWeight, parsedHeight);
+
+    console.log(`🔄 Swapping ${normalizedMealType}: "${currentMealName}" for user: ${parsedWeight}kg, ${parsedHeight}cm`);
+
+    const newMeal = await swapMeal(
+      parsedWeight,
+      parsedHeight,
+      conditions,
+      normalizedMealType,
+      currentMealName.trim(),
+      dailyCalories,
+      diet
+    );
+
+    res.json({
+      success: true,
+      mealType: normalizedMealType,
+      meal: newMeal
+    });
+
+  } catch (error) {
+    console.error('❌ Error swapping meal:', error);
+    res.status(500).json({
+      error: error.userMessage || 'Failed to swap meal',
+      details: error.userDetails || error.message,
+      code: error.errorCode || 'UNKNOWN_ERROR',
+      help: getErrorHelp(error.errorCode)
+    });
+  }
+});
 
 router.get('/history/list', async (req, res) => {
   try {
