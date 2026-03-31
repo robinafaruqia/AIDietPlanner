@@ -12,7 +12,7 @@
             min-height: 100vh;
         }
         .profile-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #E85D3B 0%, #D14B2A 100%);
             padding: 60px 0 100px;
             color: white;
         }
@@ -25,7 +25,7 @@
             align-items: center;
             justify-content: center;
             font-size: 3rem;
-            color: #667eea;
+            color: #E85D3B;
             margin: 0 auto 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow: hidden;
@@ -53,7 +53,7 @@
             padding: 15px 20px;
         }
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #E85D3B 0%, #D14B2A 100%);
             border: none;
             border-radius: 10px;
         }
@@ -66,7 +66,7 @@
             padding: 12px 15px;
         }
         .form-control:focus {
-            border-color: #667eea;
+            border-color: #E85D3B;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         .stat-card {
@@ -76,7 +76,7 @@
         .stat-value {
             font-size: 2rem;
             font-weight: bold;
-            color: #667eea;
+            color: #E85D3B;
         }
         .stat-label {
             color: #888;
@@ -149,7 +149,7 @@
         }
         .achievement-date {
             font-size: 10px;
-            color: #667eea;
+            color: #E85D3B;
         }
         .achievement-stats {
             display: flex;
@@ -163,7 +163,7 @@
         .achievement-stat-value {
             font-size: 2rem;
             font-weight: bold;
-            color: #667eea;
+            color: #E85D3B;
         }
         .achievement-stat-label {
             font-size: 12px;
@@ -180,7 +180,7 @@
             z-index: 9999;
         }
         .achievement-toast {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #E85D3B 0%, #D14B2A 100%);
             color: white;
             border-radius: 15px;
             padding: 15px 20px;
@@ -234,11 +234,257 @@
             transition: all 0.2s;
         }
         .category-tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #E85D3B 0%, #D14B2A 100%);
             color: white;
         }
         .category-tab:hover:not(.active) {
             background: #e0e0e0;
+        }
+
+        /* ========================================
+           DARK MODE STYLES - Finance Dashboard Theme
+           ======================================== */
+        [data-theme="dark"] body {
+            background: #0F0F1A !important;
+        }
+
+        [data-theme="dark"] .card {
+            background: #16162A !important;
+            border-color: rgba(99, 102, 241, 0.15) !important;
+        }
+
+        [data-theme="dark"] .card-header {
+            background: #1A1A2E !important;
+            border-bottom-color: #2E2E4A !important;
+            color: #F1F1F5 !important;
+        }
+
+        [data-theme="dark"] .card-body {
+            color: #F1F1F5;
+        }
+
+        [data-theme="dark"] .form-control {
+            background-color: #1A1A2E !important;
+            border-color: #2E2E4A !important;
+            color: #F1F1F5 !important;
+        }
+
+        [data-theme="dark"] .form-control:focus {
+            background-color: #1A1A2E !important;
+            border-color: #E85D3B !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        [data-theme="dark"] .form-control::placeholder {
+            color: #8888A4 !important;
+        }
+
+        [data-theme="dark"] .form-label {
+            color: #B4B4C6 !important;
+        }
+
+        [data-theme="dark"] .form-text {
+            color: #8888A4 !important;
+        }
+
+        /* Stats */
+        [data-theme="dark"] .stat-card {
+            background: #16162A !important;
+        }
+
+        [data-theme="dark"] .stat-value {
+            color: #818cf8 !important;
+        }
+
+        [data-theme="dark"] .stat-label {
+            color: #8888A4 !important;
+        }
+
+        /* Provider badges */
+        [data-theme="dark"] .provider-badge {
+            background: #1A1A2E !important;
+            color: #F1F1F5 !important;
+        }
+
+        [data-theme="dark"] .provider-badge.google {
+            background: rgba(66, 133, 244, 0.15) !important;
+            color: #8ab4f8 !important;
+        }
+
+        [data-theme="dark"] .provider-badge.local {
+            background: rgba(46, 125, 50, 0.15) !important;
+            color: #81c784 !important;
+        }
+
+        /* Achievement badges */
+        [data-theme="dark"] .achievement-badge {
+            background: #1A1A2E !important;
+        }
+
+        [data-theme="dark"] .achievement-badge.unlocked {
+            background: #16162A !important;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.4);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        [data-theme="dark"] .achievement-name {
+            color: #F1F1F5 !important;
+        }
+
+        [data-theme="dark"] .achievement-desc {
+            color: #8888A4 !important;
+        }
+
+        [data-theme="dark"] .achievement-date {
+            color: #818cf8 !important;
+        }
+
+        [data-theme="dark"] .achievement-stat-value {
+            color: #818cf8 !important;
+        }
+
+        [data-theme="dark"] .achievement-stat-label {
+            color: #8888A4 !important;
+        }
+
+        /* Category tabs */
+        [data-theme="dark"] .category-tab {
+            background: #1A1A2E !important;
+            color: #F1F1F5 !important;
+            border: 1px solid #2E2E4A;
+        }
+
+        [data-theme="dark"] .category-tab:hover:not(.active) {
+            background: #2E2E4A !important;
+        }
+
+        [data-theme="dark"] .category-tab.active {
+            background: linear-gradient(135deg, #E85D3B 0%, #D14B2A 100%) !important;
+            border-color: transparent !important;
+        }
+
+        /* Profile avatar in dark mode */
+        [data-theme="dark"] .profile-avatar {
+            background: #16162A;
+            color: #818cf8;
+            border: 2px solid rgba(99, 102, 241, 0.3);
+        }
+
+        /* Text colors */
+        [data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3,
+        [data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6 {
+            color: #F1F1F5 !important;
+        }
+
+        [data-theme="dark"] p {
+            color: #B4B4C6;
+        }
+
+        [data-theme="dark"] .text-muted {
+            color: #8888A4 !important;
+        }
+
+        [data-theme="dark"] .text-success {
+            color: #34D399 !important;
+        }
+
+        [data-theme="dark"] .text-danger {
+            color: #F87171 !important;
+        }
+
+        /* Buttons */
+        [data-theme="dark"] .btn-outline-secondary {
+            color: #8888A4;
+            border-color: #2E2E4A;
+        }
+
+        [data-theme="dark"] .btn-outline-secondary:hover {
+            background: #1A1A2E;
+            color: #F1F1F5;
+            border-color: #E85D3B;
+        }
+
+        [data-theme="dark"] .btn-outline-danger {
+            color: #F87171;
+            border-color: #F87171;
+        }
+
+        [data-theme="dark"] .btn-outline-danger:hover {
+            background: rgba(248, 113, 113, 0.15);
+            color: #FCA5A5;
+        }
+
+        /* Alerts */
+        [data-theme="dark"] .alert-success {
+            background: rgba(52, 211, 153, 0.1) !important;
+            border-color: rgba(52, 211, 153, 0.2) !important;
+            color: #34D399 !important;
+        }
+
+        [data-theme="dark"] .alert-danger {
+            background: rgba(248, 113, 113, 0.1) !important;
+            border-color: rgba(248, 113, 113, 0.2) !important;
+            color: #F87171 !important;
+        }
+
+        /* Nav tabs */
+        [data-theme="dark"] .nav-tabs {
+            border-bottom-color: #2E2E4A !important;
+        }
+
+        [data-theme="dark"] .nav-tabs .nav-link {
+            color: #8888A4 !important;
+        }
+
+        [data-theme="dark"] .nav-tabs .nav-link:hover {
+            border-color: #2E2E4A !important;
+            color: #F1F1F5 !important;
+        }
+
+        [data-theme="dark"] .nav-tabs .nav-link.active {
+            background-color: #16162A !important;
+            border-color: #2E2E4A !important;
+            border-bottom-color: #16162A !important;
+            color: #F1F1F5 !important;
+        }
+
+        [data-theme="dark"] .tab-content {
+            background: #16162A !important;
+            border-color: #2E2E4A !important;
+        }
+
+        /* Modals */
+        [data-theme="dark"] .modal-content {
+            background: #16162A !important;
+            border-color: #2E2E4A !important;
+        }
+
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: #2E2E4A !important;
+            color: #F1F1F5 !important;
+        }
+
+        [data-theme="dark"] .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+        [data-theme="dark"] .modal-footer {
+            border-top-color: #2E2E4A !important;
+        }
+
+        /* HR */
+        [data-theme="dark"] hr {
+            border-color: #2E2E4A !important;
+        }
+
+        /* Profile header in dark mode */
+        [data-theme="dark"] .profile-header {
+            background: linear-gradient(135deg, #1A1A2E 0%, #0F0F1A 100%) !important;
+        }
+
+        [data-theme="dark"] .profile-header h2,
+        [data-theme="dark"] .profile-header p {
+            color: #F1F1F5 !important;
         }
     </style>
 </head>
@@ -291,7 +537,7 @@
             <div class="col-md-3 col-6">
                 <div class="card stat-card">
                     <% const lost = user.startWeight && user.currentWeight ? (user.startWeight - user.currentWeight).toFixed(1) : null; %>
-                    <div class="stat-value" style="color: <%= lost > 0 ? '#22c55e' : (lost < 0 ? '#ef4444' : '#667eea') %>">
+                    <div class="stat-value" style="color: <%= lost > 0 ? '#22c55e' : (lost < 0 ? '#ef4444' : '#E85D3B') %>">
                         <%= lost ? (lost > 0 ? '-' : '+') + Math.abs(lost) : '--' %>
                     </div>
                     <div class="stat-label">Progress (kg)</div>
@@ -299,6 +545,70 @@
             </div>
         </div>
         <% } %>
+
+        <!-- Biometric Connections Section -->
+        <div class="card mb-4" id="biometricSection">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-smartwatch"></i> Connected Devices</span>
+                <span class="badge bg-secondary" id="connectionCount">0 connected</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Connect your fitness devices to automatically sync health data like steps, heart rate, and activity.</p>
+                
+                <!-- Google Fit Connection -->
+                <div class="d-flex align-items-center justify-content-between p-3 rounded mb-2" style="background: rgba(66, 133, 244, 0.1);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="device-icon" style="width: 48px; height: 48px; border-radius: 12px; background: white; display: flex; align-items: center; justify-content: center;">
+                            <svg width="24" height="24" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M11,7.5H13V12.5H16V14.5H11V7.5Z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="fw-bold">Google Fit</div>
+                            <small class="text-muted" id="googleFitStatus">Not connected</small>
+                        </div>
+                    </div>
+                    <div id="googleFitActions">
+                        <a href="/api/biometric/connect/google-fit" class="btn btn-sm btn-primary" id="btnConnectGoogleFit">
+                            <i class="bi bi-link-45deg"></i> Connect
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Apple Health (Info only) -->
+                <div class="d-flex align-items-center justify-content-between p-3 rounded mb-2" style="background: rgba(0, 0, 0, 0.05);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="device-icon" style="width: 48px; height: 48px; border-radius: 12px; background: white; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-heart-fill text-danger fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold">Apple Health</div>
+                            <small class="text-muted">Requires iOS app</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-secondary">Coming Soon</span>
+                </div>
+
+                <!-- Fitbit (Placeholder) -->
+                <div class="d-flex align-items-center justify-content-between p-3 rounded" style="background: rgba(0, 210, 184, 0.1);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="device-icon" style="width: 48px; height: 48px; border-radius: 12px; background: white; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: #00d2b8; font-weight: bold;">fitbit</span>
+                        </div>
+                        <div>
+                            <div class="fw-bold">Fitbit</div>
+                            <small class="text-muted" id="fitbitStatus">Not connected</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-secondary">Coming Soon</span>
+                </div>
+
+                <!-- Last Sync Info -->
+                <div class="text-center mt-3 small text-muted" id="lastSyncInfo" style="display: none;">
+                    <i class="bi bi-clock-history"></i> Last synced: <span id="lastSyncTime">--</span>
+                </div>
+            </div>
+        </div>
 
         <!-- Achievements Section -->
         <div class="card mb-4">
@@ -619,8 +929,79 @@
 
         window.showAchievementToast = showAchievementToast;
 
+        // ===== BIOMETRIC CONNECTIONS =====
+        async function loadBiometricStatus() {
+            try {
+                const response = await $.get('/api/biometric/status');
+                if (response.success) {
+                    updateBiometricConnectionUI(response.connections);
+                    if (response.latestData?.lastSync) {
+                        $('#lastSyncTime').text(new Date(response.latestData.lastSync).toLocaleString());
+                        $('#lastSyncInfo').show();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading biometric status:', error);
+            }
+        }
+
+        function updateBiometricConnectionUI(connections) {
+            let connectedCount = 0;
+
+            // Google Fit
+            if (connections.googleFit?.connected) {
+                connectedCount++;
+                $('#googleFitStatus').text('Connected').removeClass('text-muted').addClass('text-success');
+                $('#googleFitActions').html(`
+                    <button class="btn btn-sm btn-outline-success me-2" id="btnSyncGoogleFit">
+                        <i class="bi bi-arrow-repeat"></i> Sync
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" id="btnDisconnectGoogleFit">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                `);
+
+                // Add sync handler
+                $('#btnSyncGoogleFit').click(async function() {
+                    const btn = $(this);
+                    btn.prop('disabled', true).html('<i class="bi bi-arrow-repeat spin"></i> Syncing...');
+                    try {
+                        const response = await $.post('/api/biometric/sync/google-fit');
+                        if (response.success) {
+                            alert('Data synced successfully!');
+                            $('#lastSyncTime').text(new Date().toLocaleString());
+                            $('#lastSyncInfo').show();
+                        }
+                    } catch (error) {
+                        alert('Sync failed: ' + (error.responseJSON?.error || 'Unknown error'));
+                    } finally {
+                        btn.prop('disabled', false).html('<i class="bi bi-arrow-repeat"></i> Sync');
+                    }
+                });
+
+                // Add disconnect handler
+                $('#btnDisconnectGoogleFit').click(async function() {
+                    if (!confirm('Disconnect Google Fit? Your synced data will be kept.')) return;
+                    try {
+                        await $.post('/api/biometric/disconnect/google-fit');
+                        location.reload();
+                    } catch (error) {
+                        alert('Failed to disconnect');
+                    }
+                });
+            }
+
+            // Fitbit (future)
+            if (connections.fitbit?.connected) {
+                connectedCount++;
+            }
+
+            $('#connectionCount').text(connectedCount > 0 ? `${connectedCount} connected` : 'Not connected');
+        }
+
         $(document).ready(function() {
             loadAchievements();
+            loadBiometricStatus();
             
             const urlParams = new URLSearchParams(window.location.search);
             const newAchievements = urlParams.get('achievements');
@@ -630,6 +1011,31 @@
                     achievements.forEach(a => showAchievementToast(a));
                 } catch (e) {}
                 window.history.replaceState({}, '', '/profile');
+            }
+
+            // Handle success/error messages from OAuth callbacks
+            const success = urlParams.get('success');
+            const error = urlParams.get('error');
+            
+            if (success === 'google_fit_connected') {
+                alert('Google Fit connected successfully! Your health data will now sync automatically.');
+                window.history.replaceState({}, '', '/profile');
+            }
+            if (error) {
+                const errorMessages = {
+                    'google_fit_auth_failed': 'Google Fit authorization failed. Please try again.',
+                    'google_fit_token_failed': 'Failed to get access token. Please try again.',
+                    'google_fit_connection_failed': 'Connection failed. Please try again.'
+                };
+                alert(errorMessages[error] || 'An error occurred. Please try again.');
+                window.history.replaceState({}, '', '/profile');
+            }
+
+            // Scroll to biometric section if requested
+            if (urlParams.get('tab') === 'biometric') {
+                setTimeout(() => {
+                    document.getElementById('biometricSection')?.scrollIntoView({ behavior: 'smooth' });
+                }, 300);
             }
         });
     </script>

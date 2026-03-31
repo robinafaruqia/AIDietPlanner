@@ -106,6 +106,34 @@ const userSchema = new mongoose.Schema({
       default: '20:00'
     }
   },
+  // Biometric Connections
+  biometricConnections: {
+    googleFit: {
+      connected: { type: Boolean, default: false },
+      accessToken: String,
+      refreshToken: String,
+      tokenExpiry: Date,
+      connectedAt: Date,
+      lastSync: Date
+    },
+    fitbit: {
+      connected: { type: Boolean, default: false },
+      accessToken: String,
+      refreshToken: String,
+      tokenExpiry: Date,
+      connectedAt: Date,
+      lastSync: Date
+    }
+  },
+  // Biometric Data
+  biometricData: {
+    steps: { type: Map, of: Number },
+    heartRate: { type: Map, of: Object },
+    weight: { type: Map, of: Number },
+    sleep: { type: Map, of: Number },
+    calories: { type: Map, of: Number },
+    lastSync: Date
+  },
   isActive: {
     type: Boolean,
     default: true

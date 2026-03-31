@@ -220,30 +220,41 @@ function generateGroceryList(weeklyPlan) {
 }
 
 
-async function generateWeeklyMealPlan(weight, height, healthConditions, includeGroceryList = true, dietPreference = 'non-vegetarian') {
+async function generateWeeklyMealPlan(weight, height, healthConditions, includeGroceryList = true, dietPreference = 'non-vegetarian', singleDay = null) {
   const dailyCalories = calculateDailyCalories(weight, height);
   
   const conditionKey = healthConditions && healthConditions.length > 0 
     ? healthConditions.map(c => c.toLowerCase()).sort().join('|')
     : 'none';
-  const cacheKey = `${weight}_${height}_${conditionKey}_${includeGroceryList}_${dietPreference}`;
   
-  // Check cache (Redis with memory fallback)
-  const cached = await getFromCache(cacheKey);
-  if (cached) {
-    console.log('✅ Returning cached meal plan');
-    return cached;
+  // Different cache key for single day vs full week
+  const dayKey = singleDay ? `_day:${singleDay}` : '';
+  const cacheKey = `${weight}_${height}_${conditionKey}_${includeGroceryList}_${dietPreference}${dayKey}`;
+  
+  // Skip cache for single day plans (always generate fresh)
+  if (!singleDay) {
+    // Check cache (Redis with memory fallback)
+    const cached = await getFromCache(cacheKey);
+    if (cached) {
+      console.log('✅ Returning cached meal plan');
+      return cached;
+    }
   }
 
   // Try AI generation if available
   if (isInitialized() && process.env.GEMINI_API_KEY) {
     try {
-      console.log('🤖 Generating meal plan with AI...');
-      const aiResponse = await generateMealPlanWithAI(weight, height, healthConditions, dailyCalories, dietPreference);
+      if (singleDay) {
+        console.log(`🤖 Generating single day meal plan for ${singleDay}...`);
+      } else {
+        console.log('🤖 Generating weekly meal plan with AI...');
+      }
+      
+      const aiResponse = await generateMealPlanWithAI(weight, height, healthConditions, dailyCalories, dietPreference, singleDay);
       const { weeklyPlan: aiWeeklyPlan, groceryList: aiGroceryList } = aiResponse;
       
       // Calculate total calories
-      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      const days = singleDay ? [singleDay] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
       let totalCalories = 0;
       
       days.forEach(day => {
@@ -268,13 +279,19 @@ async function generateWeeklyMealPlan(weight, height, healthConditions, includeG
       const result = {
         weeklyPlan: aiWeeklyPlan,
         groceryList,
-        totalCalories: Math.round(totalCalories / 7)
+        totalCalories: singleDay ? totalCalories : Math.round(totalCalories / 7),
+        isSingleDay: !!singleDay,
+        selectedDay: singleDay || null
       };
 
-      // Cache the result (Redis with memory fallback)
-      await setToCache(cacheKey, result);
-
-      console.log('✅ AI meal plan generated and cached successfully');
+      // Only cache full week plans
+      if (!singleDay) {
+        await setToCache(cacheKey, result);
+        console.log('✅ AI meal plan generated and cached successfully');
+      } else {
+        console.log(`✅ Single day meal plan for ${singleDay} generated successfully`);
+      }
+      
       return result;
     } catch (error) {
       console.error('AI generation failed:', error.message);

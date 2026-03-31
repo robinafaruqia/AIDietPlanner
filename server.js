@@ -9,6 +9,7 @@ require('dotenv').config();
 
 const { initializePassport } = require('./config/passport');
 const { optionalAuth } = require('./middleware/auth');
+const { connectDB } = require('./config/database');
 
 const app = express();
 
@@ -61,42 +62,8 @@ initializePassport();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-const isDocker = process.env.DOCKER_ENV === 'true' || process.env.MONGODB_URI?.includes('mongo:');
-const defaultMongoURI = isDocker 
-  ? 'mongodb://mongo:27017/ai-diet-planner'
-  : 'mongodb://localhost:27017/ai-diet-planner';
-
-const MONGODB_URI = process.env.MONGODB_URI || defaultMongoURI;
-
-mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000
-})
-.then(() => {
-  console.log('✅ MongoDB connected successfully');
-  const dbName = MONGODB_URI.split('/').pop()?.split('?')[0] || 'ai-diet-planner';
-  console.log(`   Database: ${dbName}`);
-  const host = MONGODB_URI.match(/\/\/([^:]+):/)?.[1] || 'unknown';
-  console.log(`   Host: ${host}`);
-})
-.catch(err => {
-  console.error('❌ MongoDB connection error:', err.message);
-  const safeURI = MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
-  console.error('   Connection string:', safeURI);
-  console.error('   Error code:', err.code || err.name);
-  console.error('');
-  console.error('💡 App will run without database — meal plans will not be saved.');
-  if (err.name === 'MongooseServerSelectionError' || MONGODB_URI.includes('mongodb.net')) {
-    console.error('   For MongoDB Atlas: add your IP in Network Access (or use 0.0.0.0/0 for testing).');
-    console.error('   Ensure the cluster is not paused and credentials in .env are correct.');
-  }
-  if (err.message.includes('ECONNREFUSED')) {
-    if (MONGODB_URI.includes('localhost')) {
-      console.error('   For local MongoDB: start MongoDB (e.g. brew services start mongodb-community) or use Atlas.');
-    } else if (MONGODB_URI.includes('mongo:')) {
-      console.error('   For Docker: run docker compose up -d mongo');
-    }
-  }
+connectDB().catch(() => {
+  // Error is already logged in connectDB; continue app startup for degraded mode.
 });
 
 const authRoutes = require('./routes/auth');
@@ -107,6 +74,9 @@ const favoritesRoutes = require('./routes/favorites');
 const exerciseLibraryRoutes = require('./routes/exercise-library');
 const achievementsRoutes = require('./routes/achievements');
 const fastingRoutes = require('./routes/fasting');
+const foodRecognitionRoutes = require('./routes/food-recognition');
+const biometricRoutes = require('./routes/biometric');
+const keepAliveRoutes = require('./routes/keep-alive');
 const { getAllConditions } = require('./config/healthConditions');
 
 app.use('/api/', apiLimiter);
@@ -118,6 +88,9 @@ app.use('/api/favorites', favoritesRoutes);
 app.use('/api/exercise-library', exerciseLibraryRoutes);
 app.use('/api/achievements', achievementsRoutes);
 app.use('/api/fasting', fastingRoutes);
+app.use('/api/food-recognition', foodRecognitionRoutes);
+app.use('/api/biometric', biometricRoutes);
+app.use('/api/keep-alive', keepAliveRoutes);
 
 app.get('/api/health-conditions', (req, res) => {
   res.json({ success: true, conditions: getAllConditions() });

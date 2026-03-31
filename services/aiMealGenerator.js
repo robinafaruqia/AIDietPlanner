@@ -4,6 +4,7 @@ const { getGuidelinesForCondition } = require('../config/healthConditions');
 // Ordered fallback list: preferred model first, then progressively safer picks.
 // The env var GEMINI_MODEL (if set and not already in the list) is prepended at runtime.
 const DEFAULT_MODEL_CHAIN = [
+  'gemini-3-flash-preview',
   'gemini-2.0-flash',
   'gemini-2.5-flash-preview-05-20',
   'gemini-2.0-flash-lite',
@@ -223,6 +224,105 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just J
 }`;
 }
 
+// Create prompt for single day meal plan
+function createSingleDayPrompt(weight, height, healthConditions, dailyCalories, dietPreference, dayName) {
+  const conditionsList = healthConditions && healthConditions.length > 0 ? healthConditions : [];
+  const conditionNames = conditionsList.length > 0 ? conditionsList.join(', ') : 'none';
+  const guidelines = conditionsList.map(c => getGuidelinesForCondition(c)).join(' ')
+    || getGuidelinesForCondition(null);
+  
+  const heightInMeters = height / 100;
+  const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(1);
+
+  const isVeg = dietPreference === 'vegetarian';
+  const dietLabel = isVeg ? 'Vegetarian (no meat, poultry, or fish)' : 'Non-Vegetarian';
+  const dietRule = isVeg
+    ? 'ALL meals and snacks MUST be 100% vegetarian. Do NOT include any meat, poultry, fish, or seafood. Use plant-based proteins (lentils, beans, chickpeas, tofu, paneer, nuts, seeds, dairy, eggs) instead.'
+    : 'Meals can include both vegetarian and non-vegetarian options.';
+
+  const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+
+  return `You are a professional nutritionist. Generate a detailed meal plan for ${capitalizedDay} in JSON format.
+
+User Profile:
+- Weight: ${weight} kg
+- Height: ${height} cm (${(height / 2.54).toFixed(1)} inches)
+- BMI: ${bmi}
+- Health Condition(s): ${conditionNames}
+- Target Daily Calories: ${dailyCalories} kcal
+- Diet Preference: ${dietLabel}
+- Dietary Guidelines: ${guidelines}
+
+Requirements:
+1. Generate meals for ${capitalizedDay} ONLY
+2. The day must have: breakfast, lunch, dinner, and snacks (1-2 snacks)
+3. IMPORTANT DIET RULE: ${dietRule}
+4. Each meal must include:
+   - name: Meal name (string)
+   - ingredients: Array of ingredient names (strings)
+   - calories: Number (integer)
+   - protein: Number in grams (integer)
+   - carbs: Number in grams (integer)
+   - fat: Number in grams (integer)
+   - fiber: Number in grams (integer, optional)
+
+5. Ensure daily totals are approximately ${dailyCalories} calories
+6. Follow the dietary guidelines for the health condition
+7. Use common, accessible ingredients
+
+8. Generate a grocery list for this single day
+
+Return ONLY valid JSON in this exact format (no markdown, no code blocks, just JSON):
+{
+  "weeklyPlan": {
+    "${dayName}": {
+      "breakfast": {
+        "name": "Meal name",
+        "ingredients": ["ingredient1", "ingredient2"],
+        "calories": 300,
+        "protein": 20,
+        "carbs": 40,
+        "fat": 10,
+        "fiber": 5
+      },
+      "lunch": {
+        "name": "Meal name",
+        "ingredients": ["ingredient1", "ingredient2"],
+        "calories": 400,
+        "protein": 30,
+        "carbs": 45,
+        "fat": 12,
+        "fiber": 6
+      },
+      "dinner": {
+        "name": "Meal name",
+        "ingredients": ["ingredient1", "ingredient2"],
+        "calories": 500,
+        "protein": 35,
+        "carbs": 50,
+        "fat": 15,
+        "fiber": 8
+      },
+      "snacks": [
+        {
+          "name": "Snack name",
+          "ingredients": ["ingredient1"],
+          "calories": 150,
+          "protein": 5,
+          "carbs": 20,
+          "fat": 5,
+          "fiber": 3
+        }
+      ]
+    }
+  },
+  "groceryList": [
+    { "item": "Ingredient 1", "quantity": "amount", "category": "Protein" },
+    { "item": "Ingredient 2", "quantity": "amount", "category": "Produce" }
+  ]
+}`;
+}
+
 // Helper to create user-friendly error messages
 function createUserFriendlyError(errorType, details = '') {
   const errors = {
@@ -362,7 +462,7 @@ async function callModelWithRetry(modelName, prompt, retries = 1) {
   throw lastError;
 }
 
-async function generateMealPlanWithAI(weight, height, healthConditions, dailyCalories, dietPreference = 'non-vegetarian') {
+async function generateMealPlanWithAI(weight, height, healthConditions, dailyCalories, dietPreference = 'non-vegetarian', singleDay = null) {
   if (!process.env.GEMINI_API_KEY) {
     throw createUserFriendlyError('NO_API_KEY');
   }
@@ -370,10 +470,15 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
     throw createUserFriendlyError('NOT_INITIALIZED');
   }
 
-  const prompt = createMealPlanPrompt(weight, height, healthConditions, dailyCalories, dietPreference);
+  // Use appropriate prompt based on single day or full week
+  const prompt = singleDay 
+    ? createSingleDayPrompt(weight, height, healthConditions, dailyCalories, dietPreference, singleDay)
+    : createMealPlanPrompt(weight, height, healthConditions, dailyCalories, dietPreference);
+  
   const modelChain = getAvailableModelChain();
 
-  console.log(`🤖 Generating meal plan — will try up to ${modelChain.length} models`);
+  const planType = singleDay ? `single day (${singleDay})` : 'weekly';
+  console.log(`🤖 Generating ${planType} meal plan — will try up to ${modelChain.length} models`);
   console.log(`   User: ${weight}kg, ${height}cm, condition: ${healthConditions?.[0] || 'none'}`);
   console.log(`   Models: ${modelChain.join(' → ')}`);
 
@@ -410,7 +515,8 @@ async function generateMealPlanWithAI(weight, height, healthConditions, dailyCal
         continue;
       }
 
-      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      // For single day, only validate that specific day
+      const days = singleDay ? [singleDay] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
       const missingDays = days.filter(day => !mealPlanData.weeklyPlan[day]);
       if (missingDays.length > 0) {
         lastError = createUserFriendlyError('INVALID_RESPONSE', `AI response missing days: ${missingDays.join(', ')}`);

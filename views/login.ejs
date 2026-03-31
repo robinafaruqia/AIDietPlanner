@@ -15,29 +15,23 @@
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #F8F5F0;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
         }
 
-        /* Animated background */
+        /* Subtle background accent */
         body::before {
             content: '';
             position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 50%);
-            animation: bgFloat 20s ease-in-out infinite;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: linear-gradient(135deg, #E85D3B 0%, #D14B2A 100%);
             z-index: 0;
-        }
-
-        @keyframes bgFloat {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(5%, 5%) rotate(5deg); }
         }
 
         .login-container {
@@ -52,18 +46,18 @@
 
         .login-card {
             background: white;
-            border-radius: 24px;
-            box-shadow: 0 25px 80px rgba(0,0,0,0.3);
-            padding: 48px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 40px 36px;
             width: 100%;
-            max-width: 440px;
-            animation: cardSlideUp 0.5s ease-out;
+            max-width: 420px;
+            animation: cardSlideUp 0.4s ease-out;
         }
 
         @keyframes cardSlideUp {
             from {
                 opacity: 0;
-                transform: translateY(30px);
+                transform: translateY(20px);
             }
             to {
                 opacity: 1;
@@ -73,26 +67,23 @@
 
         .login-header {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
         }
 
         .login-icon {
-            width: 80px;
-            height: 80px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            width: 64px;
+            height: 64px;
+            border-radius: 14px;
+            background: rgba(232, 93, 59, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 20px;
+            margin: 0 auto 16px;
         }
 
         .login-icon i {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 2rem;
+            color: #E85D3B;
         }
 
         .login-header h2 {
@@ -107,20 +98,19 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #E85D3B;
             border: none;
-            padding: 14px;
-            border-radius: 12px;
+            padding: 12px;
+            border-radius: 8px;
             font-weight: 600;
             width: 100%;
             font-size: 1rem;
-            box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+            background: #D14B2A;
+            box-shadow: 0 4px 12px rgba(232, 93, 59, 0.3);
         }
 
         .btn-primary:active {
@@ -129,24 +119,23 @@
 
         .btn-google {
             background: white;
-            border: 2px solid #e5e7eb;
-            padding: 14px;
-            border-radius: 12px;
-            font-weight: 600;
+            border: 1px solid #E8E4DE;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
             width: 100%;
-            color: #374151;
+            color: #2D2D2D;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            transition: all 0.3s ease;
+            gap: 10px;
+            transition: all 0.2s ease;
         }
 
         .btn-google:hover {
-            background: #f9fafb;
-            border-color: #d1d5db;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: #FDFCFA;
+            border-color: #D8D4CE;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
 
         .divider {
@@ -176,16 +165,16 @@
         }
 
         .form-control {
-            padding: 14px 16px;
-            border-radius: 12px;
-            border: 2px solid #e5e7eb;
-            font-size: 1rem;
-            transition: all 0.2s ease;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #E8E4DE;
+            font-size: 0.95rem;
+            transition: all 0.15s ease;
         }
 
         .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+            border-color: #E85D3B;
+            box-shadow: 0 0 0 3px rgba(232, 93, 59, 0.1);
         }
 
         .form-control::placeholder {
@@ -217,7 +206,7 @@
         }
 
         .register-link a {
-            color: #667eea;
+            color: #E85D3B;
             font-weight: 600;
             text-decoration: none;
             transition: color 0.2s ease;
@@ -299,7 +288,7 @@
 
         [data-theme="dark"] .form-control:focus {
             background-color: #374151;
-            border-color: #667eea;
+            border-color: #E85D3B;
         }
 
         [data-theme="dark"] .form-control::placeholder {
@@ -473,7 +462,7 @@
 
         // Add input focus animations
         $('.form-control').on('focus', function() {
-            $(this).parent().find('i').css('color', '#667eea');
+            $(this).parent().find('i').css('color', '#E85D3B');
         }).on('blur', function() {
             $(this).parent().find('i').css('color', '#9ca3af');
         });

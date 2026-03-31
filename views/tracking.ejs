@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-gradient: linear-gradient(135deg, #E85D3B 0%, #D14B2A 100%);
             --calories-color: #ef4444;
             --protein-color: #22c55e;
             --carbs-color: #f59e0b;
@@ -317,7 +317,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) scale(0.8);
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #E85D3B, #D14B2A);
             color: white;
             padding: 30px 50px;
             border-radius: 20px;
@@ -391,7 +391,7 @@
         }
         .mood-btn:hover, .mood-btn.active {
             transform: scale(1.1);
-            border-color: #667eea;
+            border-color: #E85D3B;
         }
         .mood-btn.active {
             background: #f0f0ff;
@@ -495,11 +495,11 @@
             align-items: center;
         }
         .exercise-card:hover {
-            border-color: #667eea;
+            border-color: #E85D3B;
             background: #f8f9ff;
         }
         .exercise-card.selected {
-            border-color: #667eea;
+            border-color: #E85D3B;
             background: #f0f0ff;
             box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
         }
@@ -525,7 +525,7 @@
         }
         .duration-btn.active {
             background: var(--primary-gradient);
-            border-color: #667eea;
+            border-color: #E85D3B;
             color: white;
         }
         #exerciseCategoriesAccordion .accordion-button {
@@ -534,7 +534,7 @@
         }
         #exerciseCategoriesAccordion .accordion-button:not(.collapsed) {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            color: #667eea;
+            color: #E85D3B;
         }
         #exerciseCategoriesAccordion .accordion-body {
             padding: 12px;
@@ -542,23 +542,61 @@
             overflow-y: auto;
         }
         #selectedExercisePanel {
-            border: 2px solid #667eea;
+            border: 2px solid #E85D3B;
         }
         #calorieCalculation {
             background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(59, 130, 246, 0.1));
             border: none;
         }
         
-        /* Fasting Timer Styles */
+        /* Fasting Timer Styles - Override global card styles */
         .fasting-card {
-            background: linear-gradient(135deg, #1e1e2e, #2d2d44);
-            border-radius: 16px;
-            color: white;
+            background: linear-gradient(135deg, #1e1e2e, #2d2d44) !important;
+            border-radius: 16px !important;
+            color: white !important;
             overflow: hidden;
+            border: 1px solid rgba(168, 85, 247, 0.2) !important;
+            box-shadow: 0 4px 20px rgba(168, 85, 247, 0.15) !important;
+        }
+        .fasting-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(168, 85, 247, 0.25) !important;
+            background: linear-gradient(135deg, #1e1e2e, #2d2d44) !important;
         }
         .fasting-card .card-header {
-            background: transparent;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: transparent !important;
+            border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+            color: white !important;
+        }
+        .fasting-card .card-header span,
+        .fasting-card .card-header i {
+            color: white !important;
+        }
+        .fasting-card .card-body {
+            background: transparent !important;
+            color: white !important;
+        }
+        .fasting-card .card-body * {
+            color: inherit;
+        }
+        .fasting-card .form-check-input {
+            background-color: rgba(255,255,255,0.2) !important;
+            border-color: rgba(255,255,255,0.3) !important;
+        }
+        .fasting-card .form-check-input:checked {
+            background-color: #a855f7 !important;
+            border-color: #a855f7 !important;
+        }
+        .fasting-card input[type="time"] {
+            background: rgba(255,255,255,0.1) !important;
+            border: 1px solid rgba(255,255,255,0.2) !important;
+            color: white !important;
+            border-radius: 8px;
+            padding: 8px 12px;
+        }
+        .fasting-card input[type="time"]:focus {
+            border-color: #a855f7 !important;
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2) !important;
         }
         .fasting-timer-container {
             position: relative;
@@ -721,13 +759,141 @@
             border-radius: 16px;
             z-index: 10;
         }
+        .fasting-disabled-overlay p,
+        .fasting-disabled-overlay i {
+            color: white !important;
+        }
         .pulse-animation {
             animation: pulse 2s ease-in-out infinite;
+        }
+        
+        /* Fasting card text colors - ensure white text */
+        .fasting-card .fasting-toggle,
+        .fasting-card .fasting-toggle span,
+        .fasting-card small,
+        .fasting-card .opacity-75,
+        .fasting-card .label,
+        .fasting-card .value,
+        .fasting-card .fasting-stat-value,
+        .fasting-card .fasting-stat-label,
+        .fasting-card .fasting-timer-status,
+        .fasting-card .fasting-timer-time,
+        .fasting-card .fasting-timer-label {
+            color: white !important;
+        }
+        
+        /* Dark mode - ensure fasting card maintains its unique style */
+        [data-theme="dark"] .fasting-card {
+            background: linear-gradient(135deg, #1e1e2e, #2d2d44) !important;
+            border-color: rgba(168, 85, 247, 0.3) !important;
+        }
+        [data-theme="dark"] .fasting-card .card-header {
+            background: transparent !important;
+            color: white !important;
+        }
+        [data-theme="dark"] .fasting-card .card-body {
+            background: transparent !important;
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
         }
+
+        /* Food Photo Recognition Styles */
+        .photo-upload-area {
+            transition: all 0.3s ease;
+            background: var(--body-bg, #f9f9fb);
+        }
+        .photo-upload-area:hover,
+        .photo-upload-area.drag-over {
+            border-color: #E85D3B !important;
+            background: rgba(63, 54, 155, 0.05);
+        }
+        .photo-upload-area.drag-over {
+            transform: scale(1.02);
+        }
+        .health-score-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: white;
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .health-score-badge.score-low {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        .health-score-badge.score-medium {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        .health-score-badge.score-high {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        #photo-ingredients li,
+        #photo-alternatives li {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        #photo-ingredients li:last-child,
+        #photo-alternatives li:last-child {
+            border-bottom: none;
+        }
+
+        /* Biometric Card Styles */
+        .biometric-card {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
+            border-radius: 16px !important;
+            color: white !important;
+            border: none !important;
+        }
+        .biometric-card:hover {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
+        }
+        .biometric-card .card-header {
+            background: transparent !important;
+            border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+            color: white !important;
+        }
+        .biometric-card .card-body {
+            color: white !important;
+        }
+        .biometric-stat {
+            text-align: center;
+            padding: 10px;
+        }
+        .biometric-stat-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 1.2rem;
+        }
+        .biometric-stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .biometric-stat-label {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+        .biometric-sync-btn {
+            background: rgba(255,255,255,0.2) !important;
+            border: none !important;
+            color: white !important;
+        }
+        .biometric-sync-btn:hover {
+            background: rgba(255,255,255,0.3) !important;
+        }
+
         .form-check-input:checked {
             background-color: #a855f7;
             border-color: #a855f7;
@@ -739,7 +905,7 @@
             z-index: 9999;
         }
         .achievement-toast {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #E85D3B 0%, #D14B2A 100%);
             color: white;
             border-radius: 15px;
             padding: 15px 20px;
@@ -901,11 +1067,14 @@
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <span><i class="bi bi-journal-text text-success"></i> Food Diary</span>
                         <div class="btn-group">
+                            <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#foodPhotoModal">
+                                <i class="bi bi-camera"></i> Photo
+                            </button>
                             <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#barcodeScannerModal">
-                                <i class="bi bi-upc-scan"></i> Scan Barcode
+                                <i class="bi bi-upc-scan"></i> Barcode
                             </button>
                             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMealModal">
-                                <i class="bi bi-plus-lg"></i> Add Food
+                                <i class="bi bi-plus-lg"></i> Add
                             </button>
                         </div>
                     </div>
@@ -1030,6 +1199,64 @@
                     </div>
                 </div>
 
+                <!-- Biometric Data Card -->
+                <% if (user) { %>
+                <div class="card biometric-card" id="biometricCard">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-activity"></i> Health Metrics</span>
+                        <button class="btn btn-sm biometric-sync-btn" id="syncBiometricBtn" title="Sync with connected devices">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <div class="biometric-stat">
+                                    <div class="biometric-stat-icon">
+                                        <i class="bi bi-footprints"></i>
+                                    </div>
+                                    <div class="biometric-stat-value" id="biometric-steps">--</div>
+                                    <div class="biometric-stat-label">Steps</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="biometric-stat">
+                                    <div class="biometric-stat-icon">
+                                        <i class="bi bi-heart-pulse"></i>
+                                    </div>
+                                    <div class="biometric-stat-value" id="biometric-heart">--</div>
+                                    <div class="biometric-stat-label">BPM</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="biometric-stat">
+                                    <div class="biometric-stat-icon">
+                                        <i class="bi bi-fire"></i>
+                                    </div>
+                                    <div class="biometric-stat-value" id="biometric-burned">--</div>
+                                    <div class="biometric-stat-label">Burned</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Connection Status -->
+                        <div id="biometric-connection-status" class="text-center small opacity-75 mb-2">
+                            <span id="biometric-status-text">Not connected</span>
+                        </div>
+
+                        <!-- Manual Entry / Connect Button -->
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm biometric-sync-btn flex-grow-1" data-bs-toggle="modal" data-bs-target="#biometricManualModal">
+                                <i class="bi bi-pencil-square"></i> Manual Entry
+                            </button>
+                            <a href="/profile?tab=biometric" class="btn btn-sm biometric-sync-btn flex-grow-1">
+                                <i class="bi bi-link-45deg"></i> Connect
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+
                 <!-- Water Intake -->
                 <div class="card">
                     <div class="card-header bg-white">
@@ -1144,6 +1371,140 @@
         </div>
     </div>
 
+    <!-- Food Photo Recognition Modal -->
+    <div class="modal fade" id="foodPhotoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-camera text-info"></i> Analyze Food Photo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Upload Section -->
+                    <div id="photo-upload-section">
+                        <div class="photo-upload-area text-center p-4 border-2 border-dashed rounded-3" 
+                             id="photoDropZone" style="border: 2px dashed #dee2e6; cursor: pointer;">
+                            <i class="bi bi-cloud-arrow-up fs-1 text-muted mb-3 d-block"></i>
+                            <p class="mb-2">Drag & drop a food photo here</p>
+                            <p class="text-muted small">or click to select from your device</p>
+                            <input type="file" id="foodPhotoInput" accept="image/*" class="d-none">
+                            <button type="button" class="btn btn-outline-primary mt-2" id="btnSelectPhoto">
+                                <i class="bi bi-image"></i> Select Photo
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary mt-2 ms-2" id="btnTakePhoto">
+                                <i class="bi bi-camera"></i> Take Photo
+                            </button>
+                        </div>
+                        <div id="photo-preview-container" class="mt-3" style="display: none;">
+                            <img id="photoPreview" class="img-fluid rounded" style="max-height: 300px; display: block; margin: 0 auto;">
+                            <div class="text-center mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="btnRemovePhoto">
+                                    <i class="bi bi-trash"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analyzing Indicator -->
+                    <div id="photo-analyzing" class="text-center py-5" style="display: none;">
+                        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Analyzing...</span>
+                        </div>
+                        <p class="text-muted">AI is analyzing your food photo...</p>
+                        <p class="text-muted small">This may take a few seconds</p>
+                    </div>
+
+                    <!-- Analysis Results -->
+                    <div id="photo-analysis-results" style="display: none;">
+                        <div class="analysis-header d-flex align-items-center gap-3 mb-3">
+                            <img id="analyzed-photo-thumb" class="rounded" style="width: 80px; height: 80px; object-fit: cover;">
+                            <div>
+                                <h5 class="mb-1" id="analyzed-food-name">Food Name</h5>
+                                <p class="text-muted small mb-1" id="analyzed-food-desc">Description</p>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-info" id="analyzed-serving">Serving</span>
+                                    <span class="badge" id="analyzed-confidence">Confidence</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="nutrition-summary bg-light rounded p-3 mb-3">
+                            <div class="row text-center">
+                                <div class="col">
+                                    <div class="fs-4 fw-bold text-danger" id="photo-calories">0</div>
+                                    <small class="text-muted">Calories</small>
+                                </div>
+                                <div class="col">
+                                    <div class="fs-4 fw-bold text-success" id="photo-protein">0g</div>
+                                    <small class="text-muted">Protein</small>
+                                </div>
+                                <div class="col">
+                                    <div class="fs-4 fw-bold text-warning" id="photo-carbs">0g</div>
+                                    <small class="text-muted">Carbs</small>
+                                </div>
+                                <div class="col">
+                                    <div class="fs-4 fw-bold text-info" id="photo-fat">0g</div>
+                                    <small class="text-muted">Fat</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-white py-2">
+                                        <small class="fw-bold"><i class="bi bi-list-ul"></i> Detected Ingredients</small>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <ul class="list-unstyled mb-0 small" id="photo-ingredients"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-white py-2">
+                                        <small class="fw-bold"><i class="bi bi-heart-pulse"></i> Health Score</small>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <div class="health-score-badge" id="photo-health-score">0</div>
+                                            <small class="text-muted">/10</small>
+                                        </div>
+                                        <p class="small text-muted mb-0" id="photo-health-notes"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="photo-alternatives-card" style="display: none;">
+                            <div class="card-header bg-white py-2">
+                                <small class="fw-bold"><i class="bi bi-lightbulb"></i> Healthier Alternatives</small>
+                            </div>
+                            <div class="card-body py-2">
+                                <ul class="list-unstyled mb-0 small" id="photo-alternatives"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="photo-error" class="alert alert-danger" style="display: none;">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <span id="photo-error-message">Error analyzing photo</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnAnalyzePhoto" style="display: none;">
+                        <i class="bi bi-magic"></i> Analyze
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnAddAnalyzedFood" style="display: none;">
+                        <i class="bi bi-plus-lg"></i> Add to Diary
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Meal Modal -->
     <div class="modal fade" id="addMealModal" tabindex="-1">
         <div class="modal-dialog">
@@ -1210,6 +1571,68 @@
                     <% } %>
                     <button type="button" class="btn btn-primary" id="btnAddMeal">
                         <i class="bi bi-plus-lg"></i> Add Food
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Biometric Manual Entry Modal -->
+    <div class="modal fade" id="biometricManualModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-activity"></i> Log Health Metrics</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="biometricManualForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="manualSteps" class="form-label">Steps</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-footprints"></i></span>
+                                    <input type="number" class="form-control" id="manualSteps" placeholder="e.g., 8000" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="manualHeartRate" class="form-label">Heart Rate (BPM)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-heart-pulse"></i></span>
+                                    <input type="number" class="form-control" id="manualHeartRate" placeholder="e.g., 72" min="30" max="220">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="manualWeight" class="form-label">Weight (kg)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-speedometer2"></i></span>
+                                    <input type="number" class="form-control" id="manualWeight" placeholder="e.g., 70.5" min="20" max="300" step="0.1">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="manualSleep" class="form-label">Sleep (hours)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-moon-stars"></i></span>
+                                    <input type="number" class="form-control" id="manualSleep" placeholder="e.g., 7.5" min="0" max="24" step="0.5">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="manualCaloriesBurned" class="form-label">Calories Burned</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-fire"></i></span>
+                                <input type="number" class="form-control" id="manualCaloriesBurned" placeholder="e.g., 2000" min="0">
+                            </div>
+                            <small class="text-muted">Total calories burned today (including BMR + activity)</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveBiometric">
+                        <i class="bi bi-check-lg"></i> Save
                     </button>
                 </div>
             </div>
@@ -2756,6 +3179,236 @@
             scannedProductData = null;
         }
 
+        // ===== FOOD PHOTO RECOGNITION =====
+        let selectedFoodPhoto = null;
+        let analyzedFoodData = null;
+
+        // Photo drop zone events
+        const photoDropZone = document.getElementById('photoDropZone');
+        const foodPhotoInput = document.getElementById('foodPhotoInput');
+
+        photoDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            photoDropZone.classList.add('drag-over');
+        });
+
+        photoDropZone.addEventListener('dragleave', () => {
+            photoDropZone.classList.remove('drag-over');
+        });
+
+        photoDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            photoDropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                handlePhotoSelect(files[0]);
+            }
+        });
+
+        photoDropZone.addEventListener('click', () => {
+            foodPhotoInput.click();
+        });
+
+        $('#btnSelectPhoto').click((e) => {
+            e.stopPropagation();
+            foodPhotoInput.click();
+        });
+
+        $('#btnTakePhoto').click((e) => {
+            e.stopPropagation();
+            foodPhotoInput.setAttribute('capture', 'environment');
+            foodPhotoInput.click();
+        });
+
+        foodPhotoInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handlePhotoSelect(e.target.files[0]);
+            }
+            foodPhotoInput.removeAttribute('capture');
+        });
+
+        function handlePhotoSelect(file) {
+            selectedFoodPhoto = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                $('#photoPreview').attr('src', e.target.result);
+                $('#photo-preview-container').show();
+                $('#btnAnalyzePhoto').show();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        $('#btnRemovePhoto').click(() => {
+            selectedFoodPhoto = null;
+            foodPhotoInput.value = '';
+            $('#photoPreview').attr('src', '');
+            $('#photo-preview-container').hide();
+            $('#btnAnalyzePhoto').hide();
+        });
+
+        $('#btnAnalyzePhoto').click(async () => {
+            if (!selectedFoodPhoto) return;
+
+            $('#photo-upload-section').hide();
+            $('#photo-analyzing').show();
+            $('#photo-error').hide();
+            $('#photo-analysis-results').hide();
+            $('#btnAnalyzePhoto').hide();
+
+            const formData = new FormData();
+            formData.append('foodImage', selectedFoodPhoto);
+
+            try {
+                const response = await fetch('/api/food-recognition/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                $('#photo-analyzing').hide();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Analysis failed');
+                }
+
+                const analysis = result.analysis;
+                const isCached = result.cached === true;
+
+                if (!analysis.isFood) {
+                    throw new Error(analysis.message || 'This doesn\'t appear to be a food image');
+                }
+
+                analyzedFoodData = analysis;
+                displayPhotoAnalysis(analysis, isCached);
+
+            } catch (error) {
+                $('#photo-analyzing').hide();
+                $('#photo-upload-section').show();
+                $('#btnAnalyzePhoto').show();
+                $('#photo-error-message').text(error.message);
+                $('#photo-error').show();
+            }
+        });
+
+        function displayPhotoAnalysis(analysis, isCached = false) {
+            $('#analyzed-photo-thumb').attr('src', $('#photoPreview').attr('src'));
+            $('#analyzed-food-name').text(analysis.foodName || 'Unknown Food');
+            $('#analyzed-food-desc').text(analysis.description || '');
+            $('#analyzed-serving').text(analysis.servingSize || 'Standard serving');
+            
+            // Show cached indicator for instant results
+            if (isCached) {
+                if ($('#cached-indicator').length === 0) {
+                    $('#analyzed-food-name').after('<span id="cached-indicator" class="badge bg-info ms-2" title="Retrieved from cache for faster results"><i class="bi bi-lightning-fill"></i> Instant</span>');
+                }
+                $('#cached-indicator').show();
+            } else {
+                $('#cached-indicator').hide();
+            }
+            
+            const confidenceBadge = $('#analyzed-confidence');
+            confidenceBadge.text(analysis.confidence || 'medium');
+            confidenceBadge.removeClass('bg-success bg-warning bg-danger');
+            if (analysis.confidence === 'high') {
+                confidenceBadge.addClass('bg-success');
+            } else if (analysis.confidence === 'medium') {
+                confidenceBadge.addClass('bg-warning');
+            } else {
+                confidenceBadge.addClass('bg-danger');
+            }
+
+            const nutrition = analysis.nutrition || {};
+            $('#photo-calories').text(nutrition.calories || 0);
+            $('#photo-protein').text((nutrition.protein || 0) + 'g');
+            $('#photo-carbs').text((nutrition.carbs || 0) + 'g');
+            $('#photo-fat').text((nutrition.fat || 0) + 'g');
+
+            const ingredientsList = $('#photo-ingredients');
+            ingredientsList.empty();
+            (analysis.ingredients || []).forEach(ing => {
+                ingredientsList.append(`<li><i class="bi bi-dot"></i> ${escapeHtml(ing)}</li>`);
+            });
+
+            const healthScore = analysis.healthScore || 5;
+            const healthBadge = $('.health-score-badge');
+            healthBadge.text(healthScore).removeClass('score-low score-medium score-high');
+            if (healthScore <= 3) {
+                healthBadge.addClass('score-low');
+            } else if (healthScore <= 6) {
+                healthBadge.addClass('score-medium');
+            } else {
+                healthBadge.addClass('score-high');
+            }
+            $('#photo-health-notes').text(analysis.healthNotes || '');
+
+            const alternatives = analysis.alternatives || [];
+            if (alternatives.length > 0) {
+                const altList = $('#photo-alternatives');
+                altList.empty();
+                alternatives.forEach(alt => {
+                    altList.append(`<li><i class="bi bi-arrow-right text-success"></i> ${escapeHtml(alt)}</li>`);
+                });
+                $('#photo-alternatives-card').show();
+            } else {
+                $('#photo-alternatives-card').hide();
+            }
+
+            $('#photo-analysis-results').show();
+            $('#btnAddAnalyzedFood').show();
+        }
+
+        $('#btnAddAnalyzedFood').click(() => {
+            if (!analyzedFoodData) return;
+
+            const photoModal = bootstrap.Modal.getInstance(document.getElementById('foodPhotoModal'));
+            if (photoModal) photoModal.hide();
+
+            const mealModal = new bootstrap.Modal(document.getElementById('addMealModal'));
+
+            // Get nutrition data
+            const nutrition = analyzedFoodData.nutrition || {};
+            
+            // Populate form with correct field IDs
+            $('#mealName').val(analyzedFoodData.foodName || 'Food');
+            $('#servingSize').val(analyzedFoodData.servingSize || '1 serving');
+            $('#mealCalories').val(Math.round(nutrition.calories) || 0);
+            $('#mealProtein').val(Math.round(nutrition.protein) || 0);
+            $('#mealCarbs').val(Math.round(nutrition.carbs) || 0);
+            $('#mealFat').val(Math.round(nutrition.fat) || 0);
+            $('#mealFiber').val(Math.round(nutrition.fiber) || 0);
+
+            // Set meal type based on time of day
+            const mealType = getCurrentMealType();
+            $(`input[name="mealType"][value="${mealType}"]`).prop('checked', true);
+
+            mealModal.show();
+        });
+
+        // Food Photo Modal Events
+        const foodPhotoModal = document.getElementById('foodPhotoModal');
+        
+        foodPhotoModal.addEventListener('hidden.bs.modal', () => {
+            selectedFoodPhoto = null;
+            analyzedFoodData = null;
+            foodPhotoInput.value = '';
+            $('#photoPreview').attr('src', '');
+            $('#photo-preview-container').hide();
+            $('#photo-upload-section').show();
+            $('#photo-analyzing').hide();
+            $('#photo-analysis-results').hide();
+            $('#photo-error').hide();
+            $('#btnAnalyzePhoto').hide();
+            $('#btnAddAnalyzedFood').hide();
+        });
+
+        function getCurrentMealType() {
+            const hour = new Date().getHours();
+            if (hour < 10) return 'breakfast';
+            if (hour < 14) return 'lunch';
+            if (hour < 17) return 'snack';
+            return 'dinner';
+        }
+
         // Barcode Scanner Modal Events
         const barcodeScannerModal = document.getElementById('barcodeScannerModal');
         
@@ -3285,6 +3938,145 @@
             loadFastingStatus();
             loadFastingHistory();
             startFastingTimer();
+            loadBiometricData();
+        });
+
+        // ===== BIOMETRIC DATA =====
+        async function loadBiometricData() {
+            if (!isUserLoggedIn) return;
+            
+            try {
+                const response = await $.get('/api/biometric/data');
+                if (response.success && response.data) {
+                    updateBiometricUI(response.data);
+                }
+            } catch (error) {
+                console.error('Error loading biometric data:', error);
+            }
+        }
+
+        function updateBiometricUI(data) {
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Steps
+            if (data.steps) {
+                const steps = data.steps[today] || data.steps.get?.(today);
+                if (steps) {
+                    $('#biometric-steps').text(formatNumber(steps));
+                }
+            }
+            
+            // Heart Rate
+            if (data.heartRate) {
+                const hr = data.heartRate[today] || data.heartRate.get?.(today);
+                if (hr && hr.avg) {
+                    $('#biometric-heart').text(hr.avg);
+                }
+            }
+            
+            // Calories burned
+            if (data.calories) {
+                const cal = data.calories[today] || data.calories.get?.(today);
+                if (cal) {
+                    $('#biometric-burned').text(formatNumber(cal));
+                }
+            }
+            
+            // Update connection status
+            if (data.lastSync) {
+                const syncDate = new Date(data.lastSync);
+                const now = new Date();
+                const diffMinutes = Math.floor((now - syncDate) / 60000);
+                
+                let statusText = 'Synced ';
+                if (diffMinutes < 1) {
+                    statusText += 'just now';
+                } else if (diffMinutes < 60) {
+                    statusText += `${diffMinutes}m ago`;
+                } else if (diffMinutes < 1440) {
+                    statusText += `${Math.floor(diffMinutes / 60)}h ago`;
+                } else {
+                    statusText += `${Math.floor(diffMinutes / 1440)}d ago`;
+                }
+                $('#biometric-status-text').text(statusText);
+            }
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'k';
+            }
+            return num;
+        }
+
+        // Sync biometric data
+        $('#syncBiometricBtn').click(async () => {
+            const btn = $('#syncBiometricBtn');
+            const originalHtml = btn.html();
+            btn.html('<i class="bi bi-arrow-repeat spin"></i>');
+            btn.prop('disabled', true);
+            
+            try {
+                const statusResponse = await $.get('/api/biometric/status');
+                if (statusResponse.success && statusResponse.connections.googleFit.connected) {
+                    const syncResponse = await $.post('/api/biometric/sync/google-fit');
+                    if (syncResponse.success) {
+                        updateBiometricUI(syncResponse.data);
+                        showToast('success', 'Synced', 'Biometric data updated');
+                    }
+                } else {
+                    showToast('info', 'Not Connected', 'Connect Google Fit in your profile settings');
+                }
+            } catch (error) {
+                console.error('Sync error:', error);
+                showToast('error', 'Sync Failed', 'Could not sync biometric data');
+            } finally {
+                btn.html(originalHtml);
+                btn.prop('disabled', false);
+            }
+        });
+
+        // Manual biometric entry
+        $('#btnSaveBiometric').click(async () => {
+            const data = {};
+            
+            const steps = $('#manualSteps').val();
+            const heartRate = $('#manualHeartRate').val();
+            const weight = $('#manualWeight').val();
+            const sleepHours = $('#manualSleep').val();
+            const caloriesBurned = $('#manualCaloriesBurned').val();
+            
+            if (steps) data.steps = parseInt(steps);
+            if (heartRate) data.heartRate = parseInt(heartRate);
+            if (weight) data.weight = parseFloat(weight);
+            if (sleepHours) data.sleepHours = parseFloat(sleepHours);
+            if (caloriesBurned) data.caloriesBurned = parseInt(caloriesBurned);
+            
+            if (Object.keys(data).length === 0) {
+                showToast('warning', 'No Data', 'Please enter at least one metric');
+                return;
+            }
+            
+            try {
+                const response = await $.ajax({
+                    url: '/api/biometric/manual-entry',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data)
+                });
+                
+                if (response.success) {
+                    showToast('success', 'Saved', 'Health metrics recorded');
+                    bootstrap.Modal.getInstance(document.getElementById('biometricManualModal')).hide();
+                    loadBiometricData();
+                    
+                    // Clear form
+                    $('#biometricManualForm')[0].reset();
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showToast('error', 'Error', 'Failed to save health metrics');
+            }
         });
     </script>
 </body>
