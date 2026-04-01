@@ -39,7 +39,9 @@ console.log(`${hasEnv ? '✅' : '⚠️'} .env file exists`);
 if (!hasEnv) {
   console.log('\n⚠️  Create a .env file with:');
   console.log('   PORT=3000');
-  console.log('   MONGODB_URI=mongodb://localhost:27017/ai-diet-planner');
+  console.log('   DB_PROVIDER=supabase');
+  console.log('   SUPABASE_URL=https://<project-ref>.supabase.co');
+  console.log('   SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>');
   console.log('   SESSION_SECRET=your-secret-key');
 }
 

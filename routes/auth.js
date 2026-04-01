@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
-const User = require('../models/User');
+const userRepository = require('../repositories/userRepository');
+const { isDatabaseConnected } = require('../config/database');
 const { requireAuth, apiAuth, guestOnly } = require('../middleware/auth');
 
 function isValidEmail(email) {
@@ -33,12 +34,16 @@ router.post('/register', guestOnly, async (req, res) => {
       return res.status(400).json({ error: 'Passwords do not match' });
     }
 
-    const existingUser = await User.findByEmail(email);
+    if (!isDatabaseConnected()) {
+      return res.status(503).json({ error: 'Database not connected' });
+    }
+
+    const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    const user = new User({
+    const user = userRepository.create({
       name: name.trim(),
       email: email.toLowerCase().trim(),
       provider: 'local',
@@ -69,7 +74,7 @@ router.post('/register', guestOnly, async (req, res) => {
       if (err) {
         console.error('Session regenerate error:', err);
       }
-      req.session.userId = user._id;
+      req.session.userId = userRepository.getId(user);
       res.json({ 
         success: true, 
         message: 'Registration successful',
@@ -90,7 +95,11 @@ router.post('/login', guestOnly, async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const user = await User.findByEmail(email);
+    if (!isDatabaseConnected()) {
+      return res.status(503).json({ error: 'Database not connected' });
+    }
+
+    const user = await userRepository.findByEmail(email);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -117,7 +126,7 @@ router.post('/login', guestOnly, async (req, res) => {
       if (err) {
         console.error('Session regenerate error:', err);
       }
-      req.session.userId = user._id;
+      req.session.userId = userRepository.getId(user);
       res.json({ 
         success: true, 
         message: 'Login successful',
@@ -224,21 +233,25 @@ router.get('/google', passport.authenticate('google', {
   scope: ['profile', 'email']
 }));
 
-router.get('/google/callback', 
-  passport.authenticate('google', { 
-    failureRedirect: '/login?error=google_auth_failed',
-    session: false
-  }),
-  (req, res) => {
-    req.session.regenerate((err) => {
-      if (err) {
-        console.error('Session regenerate error:', err);
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err, user) => {
+    if (err) {
+      const safeMessage = err.message || 'google_auth_failed';
+      console.error('Google auth callback error:', safeMessage);
+      return res.redirect(`/login?error=${encodeURIComponent(safeMessage)}`);
+    }
+    if (!user) {
+      return res.redirect('/login?error=google_auth_failed');
+    }
+    req.session.regenerate((sessionError) => {
+      if (sessionError) {
+        console.error('Session regenerate error:', sessionError);
       }
-      req.session.userId = req.user._id;
+      req.session.userId = userRepository.getId(user);
       res.redirect('/');
     });
-  }
-);
+  })(req, res, next);
+});
 
 router.delete('/account', apiAuth, async (req, res) => {
   try {

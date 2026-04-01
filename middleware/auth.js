@@ -1,8 +1,8 @@
-const User = require('../models/User');
+const userRepository = require('../repositories/userRepository');
 
 function requireAuth(req, res, next) {
   if (req.session && req.session.userId) {
-    User.findById(req.session.userId)
+    userRepository.findById(req.session.userId)
       .then(user => {
         if (user && user.isActive) {
           req.user = user;
@@ -32,7 +32,7 @@ function requireAuth(req, res, next) {
 
 function apiAuth(req, res, next) {
   if (req.session && req.session.userId) {
-    User.findById(req.session.userId)
+    userRepository.findById(req.session.userId)
       .then(user => {
         if (user && user.isActive) {
           req.user = user;
@@ -53,7 +53,7 @@ function apiAuth(req, res, next) {
 
 function optionalAuth(req, res, next) {
   if (req.session && req.session.userId) {
-    User.findById(req.session.userId)
+    userRepository.findById(req.session.userId)
       .then(user => {
         if (user && user.isActive) {
           req.user = user;

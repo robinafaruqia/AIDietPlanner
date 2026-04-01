@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
 const NutritionLog = require('../models/NutritionLog');
 const { optionalAuth } = require('../middleware/auth');
 const { checkAndUnlockAchievements } = require('./achievements');
+const { isDatabaseConnected } = require('../config/database');
 const https = require('https');
 const http = require('http');
 
@@ -40,7 +40,7 @@ router.get('/log/:date?', async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
     }
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.json({
         success: true,
         log: {
@@ -67,7 +67,7 @@ router.get('/history/:days?', async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.params.days) || 7, 1), 90);
     
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.json({ success: true, history: [], message: 'Database not connected' });
     }
 
@@ -80,7 +80,8 @@ router.get('/history/:days?', async (req, res) => {
       date: { $gte: startDate, $lte: endDate }
     });
 
-    const logs = await NutritionLog.find(query).sort({ date: -1 });
+    const logs = await NutritionLog.find(query);
+    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.json({ success: true, history: logs });
   } catch (error) {
@@ -103,7 +104,7 @@ router.post('/log/meal', async (req, res) => {
       return res.status(400).json({ error: 'Invalid meal type' });
     }
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -144,7 +145,7 @@ router.post('/log/from-plan', async (req, res) => {
       return res.status(400).json({ error: 'Meal data is required' });
     }
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -180,7 +181,7 @@ router.delete('/log/meal/:date/:mealId', async (req, res) => {
   try {
     const { date, mealId } = req.params;
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -206,7 +207,7 @@ router.put('/goals', async (req, res) => {
     const { date, goals } = req.body;
     const dateString = date || getDateString();
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -236,7 +237,7 @@ router.put('/water', async (req, res) => {
     const { date, glasses } = req.body;
     const dateString = date || getDateString();
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -261,7 +262,7 @@ router.post('/log/exercise', async (req, res) => {
       return res.status(400).json({ error: 'Exercise name is required' });
     }
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -288,7 +289,7 @@ router.delete('/log/exercise/:date/:exerciseId', async (req, res) => {
   try {
     const { date, exerciseId } = req.params;
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -314,7 +315,7 @@ router.put('/biometrics', async (req, res) => {
     const { date, weight, bodyFat, waist, notes } = req.body;
     const dateString = date || getDateString();
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -346,7 +347,7 @@ router.put('/mood', async (req, res) => {
       return res.status(400).json({ error: 'Invalid mood value' });
     }
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -366,7 +367,7 @@ router.get('/biometrics/history/:days?', async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.params.days) || 30, 1), 365);
     
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.json({ success: true, history: [], message: 'Database not connected' });
     }
 
@@ -380,7 +381,8 @@ router.get('/biometrics/history/:days?', async (req, res) => {
       'biometrics.weight': { $exists: true, $gt: 0 }
     });
 
-    const logs = await NutritionLog.find(query).sort({ date: 1 }).select('dateString biometrics');
+    const logs = await NutritionLog.find(query);
+    logs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const history = logs.map(log => ({
       date: log.dateString,
@@ -453,7 +455,7 @@ router.post('/calculate-goals', (req, res) => {
 
 router.get('/streak', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.json({ success: true, streak: 0, message: 'Database not connected' });
     }
 
@@ -486,7 +488,7 @@ router.get('/streak', async (req, res) => {
 
 router.get('/summary/weekly', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.json({ success: true, summary: null, message: 'Database not connected' });
     }
 
@@ -554,7 +556,7 @@ router.get('/export/csv', async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 365);
     
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -567,7 +569,8 @@ router.get('/export/csv', async (req, res) => {
       date: { $gte: startDate, $lte: endDate }
     });
 
-    const logs = await NutritionLog.find(query).sort({ date: -1 });
+    const logs = await NutritionLog.find(query);
+    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     const csvRows = ['Date,Meal Type,Food Name,Calories,Protein,Carbs,Fat,Fiber'];
     

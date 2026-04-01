@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
 const User = require('../models/User');
 const NutritionLog = require('../models/NutritionLog');
 const { optionalAuth, requireAuth } = require('../middleware/auth');
+const { isDatabaseConnected } = require('../config/database');
 
 function getDateString(date = new Date()) {
   const year = date.getFullYear();
@@ -119,7 +119,7 @@ router.get('/status', async (req, res) => {
     let fastingSchedule = getScheduleDefaults('16:8');
     let activeFast = null;
 
-    if (userId && mongoose.connection.readyState === 1) {
+    if (userId && isDatabaseConnected()) {
       const user = await User.findById(userId);
       if (user) {
         fastingEnabled = user.fastingEnabled || false;
@@ -166,7 +166,7 @@ router.post('/start', requireAuth, async (req, res) => {
     const userId = getUserId(req);
     const { notes } = req.body;
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -210,7 +210,7 @@ router.post('/end', requireAuth, async (req, res) => {
     const userId = getUserId(req);
     const { notes } = req.body;
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -258,7 +258,7 @@ router.put('/settings', requireAuth, async (req, res) => {
     const userId = getUserId(req);
     const { fastingEnabled, scheduleType, eatingWindowStart, eatingWindowEnd } = req.body;
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -307,7 +307,7 @@ router.get('/history', async (req, res) => {
     const userId = getUserId(req);
     const days = Math.min(Math.max(parseInt(req.query.days) || 7, 1), 30);
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.json({ success: true, history: [], stats: { totalFasts: 0, completedFasts: 0, completionRate: 0 } });
     }
 
@@ -320,7 +320,8 @@ router.get('/history', async (req, res) => {
       'fastingLog.startedAt': { $exists: true }
     });
 
-    const logs = await NutritionLog.find(query).sort({ date: -1 });
+    const logs = await NutritionLog.find(query);
+    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     const history = logs.map(log => ({
       date: log.dateString,

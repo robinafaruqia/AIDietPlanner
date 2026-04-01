@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
-const MealPlan = require('../models/MealPlan');
-const User = require('../models/User');
+const mealPlanRepository = require('../repositories/mealPlanRepository');
+const userRepository = require('../repositories/userRepository');
+const { isDatabaseConnected } = require('../config/database');
 const { generateWeeklyMealPlan, calculateDailyCalories } = require('../services/mealPlanner');
 const { regenerateSingleDay, swapMeal } = require('../services/aiMealGenerator');
 const { optionalAuth } = require('../middleware/auth');
@@ -36,17 +36,17 @@ function normalizeHealthConditions(healthConditions) {
 }
 
 function getUserId(req) {
-  return req.user ? req.user._id : null;
+  return req.user ? req.user.id : null;
 }
 
 async function saveMealPlanToDatabase(weight, height, conditions, mealPlanData, userId = null) {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      console.warn('MongoDB not connected, skipping database save');
+    if (!isDatabaseConnected()) {
+      console.warn('Database not connected, skipping meal plan save');
       return null;
     }
 
-    const mealPlan = new MealPlan({
+    const mealPlan = await mealPlanRepository.create({
       userId: userId || undefined,
       weight: parseFloat(weight),
       height: parseFloat(height),
@@ -55,9 +55,7 @@ async function saveMealPlanToDatabase(weight, height, conditions, mealPlanData, 
       groceryList: mealPlanData.groceryList,
       totalCalories: mealPlanData.totalCalories
     });
-
-    await mealPlan.save();
-    return mealPlan._id;
+    return mealPlan.id;
   } catch (error) {
     console.error('Error saving meal plan to database:', error.message);
     return null;
@@ -98,19 +96,19 @@ router.post('/generate', async (req, res) => {
     const startTime = Date.now();
     
     // Skip cache for single day plans
-    if (!isSingleDay && !forceRegenerate && mongoose.connection.readyState === 1) {
+    if (!isSingleDay && !forceRegenerate && isDatabaseConnected()) {
       try {
-        const cachedPlan = await MealPlan.findCached(parsedWeight, parsedHeight, conditions, userId);
+        const cachedPlan = await mealPlanRepository.findCached(parsedWeight, parsedHeight, conditions, userId);
         
         if (cachedPlan) {
           const cacheTime = Date.now() - startTime;
-          console.log(`✅ Cached meal plan found in ${cacheTime}ms (ID: ${cachedPlan._id})`);
+          console.log(`✅ Cached meal plan found in ${cacheTime}ms (ID: ${cachedPlan.id})`);
           
           return res.json({
             success: true,
             cached: true,
             mealPlan: {
-              id: cachedPlan._id,
+              id: cachedPlan.id,
               weeklyPlan: cachedPlan.weeklyPlan,
               groceryList: cachedPlan.groceryList || [],
               totalCalories: cachedPlan.totalCalories,
@@ -156,9 +154,13 @@ router.post('/generate', async (req, res) => {
     const savedId = await saveMealPlanToDatabase(parsedWeight, parsedHeight, conditions, mealPlanData, userId);
 
     let newAchievements = [];
-    if (userId && mongoose.connection.readyState === 1) {
+    if (userId && isDatabaseConnected()) {
       try {
-        await User.findByIdAndUpdate(userId, { $inc: { mealPlansGenerated: 1 } });
+        const user = await userRepository.findById(userId);
+        if (user) {
+          user.mealPlansGenerated = (user.mealPlansGenerated || 0) + 1;
+          await user.save();
+        }
         newAchievements = await checkAndUnlockAchievements(userId, 'meal_plan_generated');
       } catch (err) {
         console.warn('Failed to update meal plan count:', err.message);
@@ -325,7 +327,7 @@ router.post('/swap-meal', async (req, res) => {
 
 router.get('/history/list', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.json({ success: true, history: [], message: 'Database not connected' });
     }
 
@@ -333,18 +335,11 @@ router.get('/history/list', async (req, res) => {
     const skip = Math.max(parseInt(req.query.skip) || 0, 0);
     const userId = getUserId(req);
 
-    const query = userId ? { userId } : {};
-
-    const mealPlans = await MealPlan.find(query)
-      .select('weight height healthConditions totalCalories createdAt')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await MealPlan.countDocuments(query);
+    const mealPlans = await mealPlanRepository.list(userId, limit, skip);
+    const total = await mealPlanRepository.count(userId);
 
     const history = mealPlans.map(plan => ({
-      id: plan._id,
+      id: plan.id,
       weight: plan.weight,
       height: plan.height,
       healthConditions: plan.healthConditions || [],
@@ -370,18 +365,8 @@ router.get('/history/list', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(400).json({ error: 'Invalid meal plan id' });
-    }
-    
     const userId = getUserId(req);
-    const query = { _id: req.params.id };
-    
-    if (userId) {
-      query.userId = userId;
-    }
-    
-    const mealPlan = await MealPlan.findOne(query);
+    const mealPlan = await mealPlanRepository.findById(req.params.id, userId);
     if (!mealPlan) {
       return res.status(404).json({ error: 'Meal plan not found' });
     }
@@ -395,9 +380,7 @@ router.get('/:id', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const userId = getUserId(req);
-    const query = userId ? { userId } : {};
-    
-    const mealPlans = await MealPlan.find(query).sort({ createdAt: -1 }).limit(10);
+    const mealPlans = await mealPlanRepository.list(userId, 10, 0);
     res.json({ success: true, mealPlans });
   } catch (error) {
     console.error('Error fetching meal plans:', error);
@@ -407,22 +390,12 @@ router.get('/', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(400).json({ error: 'Invalid meal plan id' });
-    }
-
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
     const userId = getUserId(req);
-    const query = { _id: req.params.id };
-    
-    if (userId) {
-      query.userId = userId;
-    }
-
-    const result = await MealPlan.findOneAndDelete(query);
+    const result = await mealPlanRepository.deleteById(req.params.id, userId);
     if (!result) {
       return res.status(404).json({ error: 'Meal plan not found' });
     }

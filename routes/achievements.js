@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
 const { apiAuth, optionalAuth } = require('../middleware/auth');
 const { getAllAchievements, getAchievement, getCategories } = require('../config/achievements');
 const NutritionLog = require('../models/NutritionLog');
 const User = require('../models/User');
+const { isDatabaseConnected } = require('../config/database');
 
 function getDateString(date = new Date()) {
   const year = date.getFullYear();
@@ -53,7 +53,7 @@ router.post('/check', apiAuth, async (req, res) => {
     const { context } = req.body;
     const newlyUnlocked = [];
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.json({ success: true, newlyUnlocked: [], message: 'Database not connected' });
     }
 
@@ -183,11 +183,12 @@ async function checkNutritionAchievements(user) {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const logs = await NutritionLog.find({
+  const allLogs = await NutritionLog.find({
     userId: user._id,
     date: { $gte: sevenDaysAgo },
     'meals.0': { $exists: true }
-  }).sort({ date: -1 }).limit(7);
+  });
+  const logs = allLogs.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 7);
 
   if (logs.length >= 7) {
     const allProteinMet = logs.every(log => {
@@ -269,7 +270,7 @@ async function checkMealPlanAchievements(user) {
 
 async function checkAndUnlockAchievements(userId, context) {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return [];
     }
 

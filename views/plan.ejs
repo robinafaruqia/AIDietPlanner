@@ -2368,12 +2368,12 @@
             $('#checkedCount').text(checked);
             
             // Update visual state
-            $('.grocery-item-row').each(function() {
+            $('.grocery-item-new').each(function() {
                 const checkbox = $(this).find('.grocery-checkbox');
                 if (checkbox.is(':checked')) {
-                    $(this).removeClass('unchecked');
+                    $(this).addClass('checked');
                 } else {
-                    $(this).addClass('unchecked');
+                    $(this).removeClass('checked');
                 }
             });
         }
@@ -2384,13 +2384,15 @@
         });
         
         // Select all grocery items
-        $('#selectAllGrocery').click(function() {
+        $(document).on('click', '#selectAllGrocery', function(e) {
+            e.preventDefault();
             $('.grocery-checkbox').prop('checked', true);
             updateGroceryCount();
         });
         
         // Deselect all grocery items
-        $('#deselectAllGrocery').click(function() {
+        $(document).on('click', '#deselectAllGrocery', function(e) {
+            e.preventDefault();
             $('.grocery-checkbox').prop('checked', false);
             updateGroceryCount();
         });
@@ -2410,12 +2412,9 @@
         // Print grocery list (only checked items)
         $('#printGroceryList').click(function() {
             let printHtml = '';
-            let currentCategory = '';
-            
-            $('#groceryList h5').each(function() {
-                const category = $(this).text();
-                const items = $(this).next('.list-group').find('.grocery-item-row');
-                const checkedItems = items.filter(function() {
+            $('#groceryList .grocery-category-title').each(function() {
+                const category = $(this).text().trim();
+                const checkedItems = $(this).nextUntil('.grocery-category-title', '.grocery-item-new').filter(function() {
                     return $(this).find('.grocery-checkbox').is(':checked');
                 });
                 
@@ -2423,7 +2422,7 @@
                     printHtml += `<h5 class="mt-3">${category}</h5><ul class="list-group">`;
                     checkedItems.each(function() {
                         const name = $(this).find('.grocery-item-name').text();
-                        const qty = $(this).find('.badge').text();
+                        const qty = $(this).find('.grocery-item-qty').text();
                         printHtml += `<li class="list-group-item d-flex justify-content-between">${name}<span class="badge bg-primary">${qty}</span></li>`;
                     });
                     printHtml += `</ul>`;
@@ -2477,10 +2476,9 @@
             
             let hasItems = false;
             
-            $('#groceryList h5').each(function() {
-                const category = $(this).text();
-                const items = $(this).next('.list-group').find('.grocery-item-row');
-                const checkedItems = items.filter(function() {
+            $('#groceryList .grocery-category-title').each(function() {
+                const category = $(this).text().trim();
+                const checkedItems = $(this).nextUntil('.grocery-category-title', '.grocery-item-new').filter(function() {
                     return $(this).find('.grocery-checkbox').is(':checked');
                 });
                 
@@ -2491,7 +2489,7 @@
                     
                     checkedItems.each(function() {
                         const item = $(this).find('.grocery-item-name').text().trim();
-                        const qty = $(this).find('.badge').text().trim();
+                        const qty = $(this).find('.grocery-item-qty').text().trim();
                         textContent += `  [ ] ${item} - ${qty}\n`;
                     });
                     textContent += "\n";

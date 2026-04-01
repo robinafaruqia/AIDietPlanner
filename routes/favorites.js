@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
-const FavoriteMeal = require('../models/FavoriteMeal');
-const NutritionLog = require('../models/NutritionLog');
+const favoriteRepository = require('../repositories/favoriteRepository');
+const nutritionRepository = require('../repositories/nutritionRepository');
+const { isDatabaseConnected } = require('../config/database');
 const { apiAuth } = require('../middleware/auth');
 
 function getDateString(date = new Date()) {
@@ -21,7 +21,7 @@ router.use(apiAuth);
 
 router.get('/', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
@@ -29,15 +29,15 @@ router.get('/', async (req, res) => {
     
     let favorites;
     if (mealType && ['breakfast', 'lunch', 'dinner', 'snack'].includes(mealType)) {
-      favorites = await FavoriteMeal.findByUserAndType(req.user._id, mealType);
+      favorites = await favoriteRepository.listByUser(req.user.id, mealType);
     } else {
-      favorites = await FavoriteMeal.findByUser(req.user._id);
+      favorites = await favoriteRepository.listByUser(req.user.id);
     }
 
     res.json({ 
       success: true, 
       favorites: favorites.map(f => ({
-        id: f._id,
+        id: f.id,
         name: f.name,
         mealType: f.mealType,
         calories: f.calories,
@@ -70,24 +70,21 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid meal type' });
     }
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const existingFavorite = await FavoriteMeal.findOne({
-      userId: req.user._id,
-      name: name.trim().toLowerCase()
-    });
+    const existingFavorite = await favoriteRepository.findDuplicate(req.user.id, name.trim().toLowerCase());
 
     if (existingFavorite) {
       return res.status(409).json({ 
         error: 'A favorite with this name already exists',
-        existingId: existingFavorite._id
+        existingId: existingFavorite.id
       });
     }
 
-    const favorite = new FavoriteMeal({
-      userId: req.user._id,
+    const favorite = await favoriteRepository.create({
+      userId: req.user.id,
       name: name.trim(),
       mealType,
       calories: parseNumber(calories),
@@ -100,12 +97,10 @@ router.post('/', async (req, res) => {
       notes: notes || ''
     });
 
-    await favorite.save();
-
     res.status(201).json({ 
       success: true, 
       favorite: {
-        id: favorite._id,
+        id: favorite.id,
         name: favorite.name,
         mealType: favorite.mealType,
         calories: favorite.calories,
@@ -128,14 +123,11 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const favorite = await FavoriteMeal.findOne({
-      _id: req.params.id,
-      userId: req.user._id
-    });
+    const favorite = await favoriteRepository.findById(req.params.id, req.user.id);
 
     if (!favorite) {
       return res.status(404).json({ error: 'Favorite not found' });
@@ -168,24 +160,22 @@ router.put('/:id', async (req, res) => {
   try {
     const { name, mealType, calories, protein, carbs, fat, fiber, ingredients, servingSize, notes } = req.body;
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const favorite = await FavoriteMeal.findOne({
-      _id: req.params.id,
-      userId: req.user._id
-    });
+    const existing = await favoriteRepository.findById(req.params.id, req.user.id);
 
-    if (!favorite) {
+    if (!existing) {
       return res.status(404).json({ error: 'Favorite not found' });
     }
 
+    const patch = {};
     if (name !== undefined) {
       if (!name.trim()) {
         return res.status(400).json({ error: 'Meal name cannot be empty' });
       }
-      favorite.name = name.trim();
+      patch.name = name.trim();
     }
 
     if (mealType !== undefined) {
@@ -193,21 +183,21 @@ router.put('/:id', async (req, res) => {
       if (!validMealTypes.includes(mealType)) {
         return res.status(400).json({ error: 'Invalid meal type' });
       }
-      favorite.mealType = mealType;
+      patch.mealType = mealType;
     }
 
-    if (calories !== undefined) favorite.calories = parseNumber(calories);
-    if (protein !== undefined) favorite.protein = parseNumber(protein);
-    if (carbs !== undefined) favorite.carbs = parseNumber(carbs);
-    if (fat !== undefined) favorite.fat = parseNumber(fat);
-    if (fiber !== undefined) favorite.fiber = parseNumber(fiber);
+    if (calories !== undefined) patch.calories = parseNumber(calories);
+    if (protein !== undefined) patch.protein = parseNumber(protein);
+    if (carbs !== undefined) patch.carbs = parseNumber(carbs);
+    if (fat !== undefined) patch.fat = parseNumber(fat);
+    if (fiber !== undefined) patch.fiber = parseNumber(fiber);
     if (ingredients !== undefined) {
-      favorite.ingredients = Array.isArray(ingredients) ? ingredients.filter(i => i && i.trim()) : [];
+      patch.ingredients = Array.isArray(ingredients) ? ingredients.filter(i => i && i.trim()) : [];
     }
-    if (servingSize !== undefined) favorite.servingSize = servingSize;
-    if (notes !== undefined) favorite.notes = notes;
+    if (servingSize !== undefined) patch.servingSize = servingSize;
+    if (notes !== undefined) patch.notes = notes;
 
-    await favorite.save();
+    const favorite = await favoriteRepository.update(req.params.id, req.user.id, patch);
 
     res.json({ 
       success: true, 
@@ -235,14 +225,11 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const favorite = await FavoriteMeal.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user._id
-    });
+    const favorite = await favoriteRepository.remove(req.params.id, req.user.id);
 
     if (!favorite) {
       return res.status(404).json({ error: 'Favorite not found' });
@@ -267,20 +254,17 @@ router.post('/:id/log', async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
     }
 
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDatabaseConnected()) {
       return res.status(503).json({ error: 'Database not connected' });
     }
 
-    const favorite = await FavoriteMeal.findOne({
-      _id: req.params.id,
-      userId: req.user._id
-    });
+    const favorite = await favoriteRepository.findById(req.params.id, req.user.id);
 
     if (!favorite) {
       return res.status(404).json({ error: 'Favorite not found' });
     }
 
-    const log = await NutritionLog.getOrCreateForDate(req.user._id, dateString);
+    const log = await nutritionRepository.getOrCreateForDate(req.user.id, dateString);
     
     log.meals.push({
       mealType: favorite.mealType,
@@ -294,7 +278,7 @@ router.post('/:id/log', async (req, res) => {
       time: new Date()
     });
 
-    await log.save();
+    await nutritionRepository.save(log);
 
     res.json({ 
       success: true, 

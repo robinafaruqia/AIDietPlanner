@@ -1,49 +1,64 @@
-const mongoose = require('mongoose');
+const { createClient } = require('@supabase/supabase-js');
 
-const isDocker = process.env.DOCKER_ENV === 'true' || process.env.MONGODB_URI?.includes('mongo:');
-const defaultMongoURI = isDocker
-  ? 'mongodb://mongo:27017/ai-diet-planner'
-  : 'mongodb://localhost:27017/ai-diet-planner';
+const DB_PROVIDER = (process.env.DB_PROVIDER || 'supabase').toLowerCase();
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
-const MONGODB_URI = process.env.MONGODB_URI || defaultMongoURI;
+let connected = false;
+let supabaseClient = null;
 
-async function connectDB() {
-  if (mongoose.connection.readyState === 1) {
-    return mongoose.connection;
-  }
-
-  try {
-    await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000
-    });
-
-    console.log('✅ MongoDB connected successfully');
-    const dbName = MONGODB_URI.split('/').pop()?.split('?')[0] || 'ai-diet-planner';
-    console.log(`   Database: ${dbName}`);
-    const host = MONGODB_URI.match(/\/\/([^:]+):/)?.[1] || 'unknown';
-    console.log(`   Host: ${host}`);
-    return mongoose.connection;
-  } catch (err) {
-    console.error('❌ MongoDB connection error:', err.message);
-    const safeURI = MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
-    console.error('   Connection string:', safeURI);
-    console.error('   Error code:', err.code || err.name);
-    console.error('');
-    console.error('💡 App will run without database — meal plans will not be saved.');
-    if (err.name === 'MongooseServerSelectionError' || MONGODB_URI.includes('mongodb.net')) {
-      console.error('   For MongoDB Atlas: add your IP in Network Access (or use 0.0.0.0/0 for testing).');
-      console.error('   Ensure the cluster is not paused and credentials in .env are correct.');
-    }
-    if (err.message.includes('ECONNREFUSED')) {
-      if (MONGODB_URI.includes('localhost')) {
-        console.error('   For local MongoDB: start MongoDB (e.g. brew services start mongodb-community) or use Atlas.');
-      } else if (MONGODB_URI.includes('mongo:')) {
-        console.error('   For Docker: run docker compose up -d mongo');
-      }
-    }
-    throw err;
+function assertSupabaseConfig() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error(
+      'Missing Supabase configuration. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY).'
+    );
   }
 }
 
-module.exports = { connectDB, MONGODB_URI };
+async function connectSupabase() {
+  assertSupabaseConfig();
+
+  if (supabaseClient) {
+    connected = true;
+    return supabaseClient;
+  }
+
+  supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false }
+  });
+  connected = true;
+
+  console.log('✅ Supabase client initialized');
+  console.log(`   Provider: ${DB_PROVIDER}`);
+  console.log(`   URL: ${SUPABASE_URL}`);
+
+  return supabaseClient;
+}
+
+async function connectDB() {
+  if (DB_PROVIDER !== 'supabase') {
+    throw new Error(`Unsupported DB_PROVIDER "${DB_PROVIDER}". Current supported provider: supabase`);
+  }
+  return connectSupabase();
+}
+
+function isDatabaseConnected() {
+  return connected;
+}
+
+function getDatabaseClient() {
+  return supabaseClient;
+}
+
+async function disconnectDB() {
+  connected = false;
+  supabaseClient = null;
+}
+
+module.exports = {
+  connectDB,
+  disconnectDB,
+  getDatabaseClient,
+  isDatabaseConnected,
+  DB_PROVIDER
+};

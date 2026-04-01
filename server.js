@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const passport = require('passport');
@@ -9,7 +8,7 @@ require('dotenv').config();
 
 const { initializePassport } = require('./config/passport');
 const { optionalAuth } = require('./middleware/auth');
-const { connectDB } = require('./config/database');
+const { connectDB, disconnectDB, isDatabaseConnected, DB_PROVIDER } = require('./config/database');
 
 const app = express();
 
@@ -62,9 +61,18 @@ initializePassport();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-connectDB().catch(() => {
-  // Error is already logged in connectDB; continue app startup for degraded mode.
-});
+async function startServer() {
+  try {
+    await connectDB();
+  } catch (err) {
+    // Error is already logged in connectDB; continue app startup for degraded mode.
+  }
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 const authRoutes = require('./routes/auth');
 const mealPlanRoutes = require('./routes/mealPlan');
@@ -133,7 +141,8 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    dbProvider: DB_PROVIDER,
+    database: isDatabaseConnected() ? 'connected' : 'disconnected'
   };
   res.json(health);
 });
@@ -142,16 +151,13 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+startServer();
 
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received. Shutting down gracefully...');
   try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed.');
+    await disconnectDB();
+    console.log('Database connection closed.');
     process.exit(0);
   } catch (err) {
     console.error('Error during shutdown:', err);

@@ -15,10 +15,7 @@
  */
 
 require('dotenv').config();
-const mongoose = require('mongoose');
-const NutritionLog = require('../models/NutritionLog');
-const MealPlan = require('../models/MealPlan');
-const User = require('../models/User');
+const { connectDB, disconnectDB, getDatabaseClient } = require('../config/database');
 
 const args = process.argv.slice(2);
 const isDryRun = !args.includes('--execute');
@@ -28,75 +25,72 @@ const defaultEmail = emailFlag !== -1 && args[emailFlag + 1]
   : null;
 
 async function migrate() {
-  const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ai-diet-planner';
-
   console.log(isDryRun ? '=== DRY RUN (no changes will be written) ===' : '=== EXECUTING MIGRATION ===');
-  console.log(`Connecting to: ${MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
-
-  await mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 10000,
-    socketTimeoutMS: 45000
-  });
-  console.log('Connected to MongoDB\n');
+  await connectDB();
+  const db = getDatabaseClient();
+  console.log('Connected to Supabase\n');
 
   let defaultUser;
 
   if (defaultEmail) {
-    defaultUser = await User.findByEmail(defaultEmail);
+    const { data, error } = await db.from('users').select('*').eq('email', defaultEmail.toLowerCase().trim()).maybeSingle();
+    if (error) throw error;
+    defaultUser = data;
     if (!defaultUser) {
       console.error(`No user found with email: ${defaultEmail}`);
       process.exit(1);
     }
   } else {
-    defaultUser = await User.findOne({ isActive: true }).sort({ createdAt: 1 });
+    const { data, error } = await db.from('users').select('*').eq('is_active', true).order('created_at', { ascending: true }).limit(1);
+    if (error) throw error;
+    defaultUser = data?.[0];
   }
 
   if (!defaultUser) {
     console.log('No existing user found. Creating a default migration user...');
     if (!isDryRun) {
-      defaultUser = new User({
+      const payload = {
         name: 'Migrated User',
         email: 'migrated@aidietplanner.local',
-        provider: 'local'
-      });
-      await defaultUser.setPassword('changeme123');
-      await defaultUser.save();
-      console.log(`  Created user: ${defaultUser.email} (ID: ${defaultUser._id})`);
+        provider: 'local',
+        password_hash: null,
+        is_active: true
+      };
+      const { data, error } = await db.from('users').insert(payload).select('*').single();
+      if (error) throw error;
+      defaultUser = data;
+      console.log(`  Created user: ${defaultUser.email} (ID: ${defaultUser.id})`);
     } else {
       console.log('  [dry run] Would create a default migration user');
     }
   } else {
-    console.log(`Using existing user: ${defaultUser.email || defaultUser.name} (ID: ${defaultUser._id})`);
+    console.log(`Using existing user: ${defaultUser.email || defaultUser.name} (ID: ${defaultUser.id})`);
   }
 
-  const orphanedLogs = await NutritionLog.countDocuments({
-    $or: [{ userId: { $exists: false } }, { userId: null }]
-  });
+  const { data: orphanedLogRows, error: logsCountError } = await db.from('nutrition_logs').select('id').is('user_id', null);
+  if (logsCountError) throw logsCountError;
+  const orphanedLogs = orphanedLogRows?.length || 0;
   console.log(`\nNutritionLog documents without userId: ${orphanedLogs}`);
 
   if (orphanedLogs > 0 && !isDryRun && defaultUser) {
-    const result = await NutritionLog.updateMany(
-      { $or: [{ userId: { $exists: false } }, { userId: null }] },
-      { $set: { userId: defaultUser._id } }
-    );
-    console.log(`  Updated ${result.modifiedCount} NutritionLog documents`);
+    const { error } = await db.from('nutrition_logs').update({ user_id: defaultUser.id }).is('user_id', null);
+    if (error) throw error;
+    console.log(`  Updated ${orphanedLogs} NutritionLog documents`);
   } else if (orphanedLogs > 0) {
-    console.log(`  [dry run] Would assign ${orphanedLogs} logs to user ${defaultUser?._id || '<new user>'}`);
+    console.log(`  [dry run] Would assign ${orphanedLogs} logs to user ${defaultUser?.id || '<new user>'}`);
   }
 
-  const orphanedPlans = await MealPlan.countDocuments({
-    $or: [{ userId: { $exists: false } }, { userId: null }]
-  });
+  const { data: orphanedPlanRows, error: plansCountError } = await db.from('meal_plans').select('id').is('user_id', null);
+  if (plansCountError) throw plansCountError;
+  const orphanedPlans = orphanedPlanRows?.length || 0;
   console.log(`\nMealPlan documents without userId: ${orphanedPlans}`);
 
   if (orphanedPlans > 0 && !isDryRun && defaultUser) {
-    const result = await MealPlan.updateMany(
-      { $or: [{ userId: { $exists: false } }, { userId: null }] },
-      { $set: { userId: defaultUser._id } }
-    );
-    console.log(`  Updated ${result.modifiedCount} MealPlan documents`);
+    const { error } = await db.from('meal_plans').update({ user_id: defaultUser.id }).is('user_id', null);
+    if (error) throw error;
+    console.log(`  Updated ${orphanedPlans} MealPlan documents`);
   } else if (orphanedPlans > 0) {
-    console.log(`  [dry run] Would assign ${orphanedPlans} plans to user ${defaultUser?._id || '<new user>'}`);
+    console.log(`  [dry run] Would assign ${orphanedPlans} plans to user ${defaultUser?.id || '<new user>'}`);
   }
 
   console.log('\n--- Summary ---');
@@ -108,7 +102,7 @@ async function migrate() {
     console.log('  node scripts/migrate-to-users.js --execute');
   }
 
-  await mongoose.connection.close();
+  await disconnectDB();
   console.log('\nDone.');
 }
 

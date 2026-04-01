@@ -1,14 +1,21 @@
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const User = require('../models/User');
+const userRepository = require('../repositories/userRepository');
+
+function normalizePassportError(error) {
+  if (!error) return null;
+  if (error instanceof Error) return error;
+  const message = error.message || error.details || JSON.stringify(error);
+  return new Error(message);
+}
 
 function initializePassport() {
   passport.use(new LocalStrategy(
     { usernameField: 'email' },
     async (email, password, done) => {
       try {
-        const user = await User.findByEmail(email);
+        const user = await userRepository.findByEmail(email);
         
         if (!user) {
           return done(null, false, { message: 'Invalid email or password' });
@@ -34,7 +41,7 @@ function initializePassport() {
 
         return done(null, user);
       } catch (error) {
-        return done(error);
+        return done(normalizePassportError(error));
       }
     }
   ));
@@ -55,7 +62,7 @@ function initializePassport() {
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
-          let user = await User.findByGoogleId(profile.id);
+          let user = await userRepository.findByGoogleId(profile.id);
 
           if (user) {
             user.lastLogin = new Date();
@@ -69,7 +76,7 @@ function initializePassport() {
           const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
           
           if (email) {
-            user = await User.findByEmail(email);
+            user = await userRepository.findByEmail(email);
             if (user) {
               user.googleId = profile.id;
               user.provider = 'google';
@@ -82,7 +89,7 @@ function initializePassport() {
             }
           }
 
-          user = new User({
+          user = userRepository.create({
             googleId: profile.id,
             email: email,
             name: profile.displayName || 'User',
@@ -94,7 +101,7 @@ function initializePassport() {
           await user.save();
           return done(null, user);
         } catch (error) {
-          return done(error);
+          return done(normalizePassportError(error));
         }
       }
     ));
@@ -104,12 +111,12 @@ function initializePassport() {
   }
 
   passport.serializeUser((user, done) => {
-    done(null, user._id);
+    done(null, userRepository.getId(user));
   });
 
   passport.deserializeUser(async (id, done) => {
     try {
-      const user = await User.findById(id);
+      const user = await userRepository.findById(id);
       done(null, user);
     } catch (error) {
       done(error);
