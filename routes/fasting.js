@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const NutritionLog = require('../models/NutritionLog');
+const userRepository = require('../repositories/userRepository');
 const { optionalAuth, requireAuth } = require('../middleware/auth');
 const { isDatabaseConnected } = require('../config/database');
 
@@ -13,7 +14,7 @@ function getDateString(date = new Date()) {
 }
 
 function getUserId(req) {
-  return req.user ? req.user._id : null;
+  return req.user ? userRepository.getId(req.user) : null;
 }
 
 function buildQuery(userId, extra = {}) {
@@ -307,6 +308,10 @@ router.get('/history', async (req, res) => {
     const userId = getUserId(req);
     const days = Math.min(Math.max(parseInt(req.query.days) || 7, 1), 30);
 
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     if (!isDatabaseConnected()) {
       return res.json({ success: true, history: [], stats: { totalFasts: 0, completedFasts: 0, completionRate: 0 } });
     }
@@ -315,15 +320,11 @@ router.get('/history', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const query = buildQuery(userId, {
-      date: { $gte: startDate, $lte: endDate },
-      'fastingLog.startedAt': { $exists: true }
-    });
+    const logs = await NutritionLog.findByRange(userId, startDate, endDate, false);
+    const fastingLogs = logs.filter((log) => !!log.fastingLog?.startedAt);
+    fastingLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const logs = await NutritionLog.find(query);
-    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    const history = logs.map(log => ({
+    const history = fastingLogs.map(log => ({
       date: log.dateString,
       startedAt: log.fastingLog.startedAt,
       endedAt: log.fastingLog.endedAt,

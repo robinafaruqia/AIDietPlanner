@@ -1,8 +1,13 @@
 const userRepository = require('../repositories/userRepository');
 
+function sessionUserId(req) {
+  return userRepository.normalizeUserId(req.session?.userId);
+}
+
 function requireAuth(req, res, next) {
-  if (req.session && req.session.userId) {
-    userRepository.findById(req.session.userId)
+  const uid = sessionUserId(req);
+  if (req.session && uid) {
+    userRepository.findById(uid)
       .then(user => {
         if (user && user.isActive) {
           req.user = user;
@@ -31,8 +36,9 @@ function requireAuth(req, res, next) {
 }
 
 function apiAuth(req, res, next) {
-  if (req.session && req.session.userId) {
-    userRepository.findById(req.session.userId)
+  const uid = sessionUserId(req);
+  if (req.session && uid) {
+    userRepository.findById(uid)
       .then(user => {
         if (user && user.isActive) {
           req.user = user;
@@ -52,8 +58,9 @@ function apiAuth(req, res, next) {
 }
 
 function optionalAuth(req, res, next) {
-  if (req.session && req.session.userId) {
-    userRepository.findById(req.session.userId)
+  const uid = sessionUserId(req);
+  if (req.session && uid) {
+    userRepository.findById(uid)
       .then(user => {
         if (user && user.isActive) {
           req.user = user;
@@ -70,7 +77,7 @@ function optionalAuth(req, res, next) {
 }
 
 function guestOnly(req, res, next) {
-  if (req.session && req.session.userId) {
+  if (req.session && sessionUserId(req)) {
     if (req.xhr || req.headers.accept?.includes('application/json')) {
       return res.status(400).json({ error: 'Already logged in' });
     }

@@ -9,6 +9,7 @@ require('dotenv').config();
 const { initializePassport } = require('./config/passport');
 const { optionalAuth } = require('./middleware/auth');
 const { connectDB, disconnectDB, isDatabaseConnected, DB_PROVIDER } = require('./config/database');
+const { isProduction } = require('./config/environment');
 
 const app = express();
 
@@ -33,12 +34,12 @@ app.use(bodyParser.json({ limit: '200kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.disable('x-powered-by');
 
-if (process.env.NODE_ENV === 'production') {
+if (isProduction) {
   app.set('trust proxy', 1);
 }
 
 const sessionSecret = process.env.SESSION_SECRET;
-if (process.env.NODE_ENV === 'production' && (!sessionSecret || sessionSecret.length < 16)) {
+if (isProduction && (!sessionSecret || sessionSecret.length < 16)) {
   throw new Error('SESSION_SECRET must be set (>=16 chars) in production');
 }
 
@@ -50,7 +51,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));

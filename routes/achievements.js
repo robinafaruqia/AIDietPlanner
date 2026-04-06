@@ -4,6 +4,7 @@ const { apiAuth, optionalAuth } = require('../middleware/auth');
 const { getAllAchievements, getAchievement, getCategories } = require('../config/achievements');
 const NutritionLog = require('../models/NutritionLog');
 const User = require('../models/User');
+const userRepository = require('../repositories/userRepository');
 const { isDatabaseConnected } = require('../config/database');
 
 function getDateString(date = new Date()) {
@@ -89,9 +90,11 @@ router.post('/check', apiAuth, async (req, res) => {
 
 async function checkLoggingAchievements(user) {
   const unlocked = [];
+  const uid = userRepository.getId(user);
+  if (!uid) return unlocked;
 
   const totalMeals = await NutritionLog.aggregate([
-    { $match: { userId: user._id } },
+    { $match: { userId: uid } },
     { $unwind: '$meals' },
     { $count: 'total' }
   ]);
@@ -103,7 +106,7 @@ async function checkLoggingAchievements(user) {
     }
   }
 
-  const streak = await calculateLoggingStreak(user._id);
+  const streak = await calculateLoggingStreak(uid);
 
   if (streak >= 7 && !user.hasAchievement('week_warrior')) {
     await user.unlockAchievement('week_warrior');
@@ -115,7 +118,7 @@ async function checkLoggingAchievements(user) {
     unlocked.push('month_master');
   }
 
-  const earlyBreakfast = await checkEarlyBirdAchievement(user._id);
+  const earlyBreakfast = await checkEarlyBirdAchievement(uid);
   if (earlyBreakfast && !user.hasAchievement('early_bird')) {
     await user.unlockAchievement('early_bird');
     unlocked.push('early_bird');
@@ -179,12 +182,14 @@ async function checkEarlyBirdAchievement(userId) {
 
 async function checkNutritionAchievements(user) {
   const unlocked = [];
+  const uid = userRepository.getId(user);
+  if (!uid) return unlocked;
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
   const allLogs = await NutritionLog.find({
-    userId: user._id,
+    userId: uid,
     date: { $gte: sevenDaysAgo },
     'meals.0': { $exists: true }
   });
@@ -274,7 +279,10 @@ async function checkAndUnlockAchievements(userId, context) {
       return [];
     }
 
-    const user = await User.findById(userId);
+    const uid = userRepository.normalizeUserId(userId);
+    if (!uid) return [];
+
+    const user = await User.findById(uid);
     if (!user) return [];
 
     let unlocked = [];

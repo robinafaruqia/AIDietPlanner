@@ -14,6 +14,23 @@ function isValidPassword(password) {
   return password && password.length >= 6;
 }
 
+function trimTrailingSlash(value) {
+  return String(value || '').replace(/\/+$/, '');
+}
+
+function resolveGoogleCallbackUrl(req) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const configuredUrl = trimTrailingSlash(process.env.GOOGLE_CALLBACK_URL);
+  if (isProduction && configuredUrl) return configuredUrl;
+
+  const forwardedProto = req.get('x-forwarded-proto');
+  const proto = isProduction
+    ? (forwardedProto || req.protocol || 'https').split(',')[0].trim()
+    : 'http';
+  const host = req.get('x-forwarded-host') || req.get('host');
+  return `${proto}://${host}/api/auth/google/callback`;
+}
+
 router.post('/register', guestOnly, async (req, res) => {
   try {
     const { name, email, password, confirmPassword, height, startWeight, targetWeight, healthConditions } = req.body;
@@ -229,12 +246,17 @@ router.put('/change-password', apiAuth, async (req, res) => {
   }
 });
 
-router.get('/google', passport.authenticate('google', {
-  scope: ['profile', 'email']
-}));
+router.get('/google', (req, res, next) => {
+  const callbackURL = resolveGoogleCallbackUrl(req);
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    callbackURL
+  })(req, res, next);
+});
 
 router.get('/google/callback', (req, res, next) => {
-  passport.authenticate('google', { session: false }, (err, user) => {
+  const callbackURL = resolveGoogleCallbackUrl(req);
+  passport.authenticate('google', { session: false, callbackURL }, (err, user) => {
     if (err) {
       const safeMessage = err.message || 'google_auth_failed';
       console.error('Google auth callback error:', safeMessage);

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const NutritionLog = require('../models/NutritionLog');
+const userRepository = require('../repositories/userRepository');
 const { optionalAuth } = require('../middleware/auth');
 const { checkAndUnlockAchievements } = require('./achievements');
 const { isDatabaseConnected } = require('../config/database');
@@ -20,7 +21,7 @@ function parseNumber(value, defaultVal = 0) {
 }
 
 function getUserId(req) {
-  return req.user ? req.user._id : null;
+  return req.user ? userRepository.getId(req.user) : null;
 }
 
 function buildQuery(userId, extra = {}) {

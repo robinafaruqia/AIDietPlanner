@@ -2817,8 +2817,6 @@
         const isLoggedIn = <%= user ? 'true' : 'false' %>;
 
         async function loadFavorites() {
-            if (!isLoggedIn) return;
-            
             try {
                 const response = await $.get('/api/favorites');
                 if (response.success) {

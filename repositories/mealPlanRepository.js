@@ -1,4 +1,10 @@
 const { getDatabaseClient } = require('../config/database');
+const userRepository = require('./userRepository');
+
+function normUserId(userId) {
+  if (userId == null) return null;
+  return userRepository.normalizeUserId(userId);
+}
 
 function getClient() {
   const client = getDatabaseClient();
@@ -25,7 +31,7 @@ function fromRow(row) {
 const mealPlanRepository = {
   async create(payload) {
     const { data, error } = await getClient().from('meal_plans').insert({
-      user_id: payload.userId || null,
+      user_id: normUserId(payload.userId),
       weight: payload.weight,
       height: payload.height,
       health_conditions: payload.healthConditions || [],
@@ -48,7 +54,8 @@ const mealPlanRepository = {
       .gte('created_at', minDate.toISOString())
       .order('created_at', { ascending: false })
       .limit(20);
-    if (userId) query = query.eq('user_id', userId);
+    const uid = normUserId(userId);
+    if (uid) query = query.eq('user_id', uid);
     const { data, error } = await query;
     if (error) throw error;
     const normalized = [...(healthConditions || [])].sort().join('|');
@@ -58,7 +65,8 @@ const mealPlanRepository = {
 
   async list(userId, limit = 10, offset = 0) {
     let query = getClient().from('meal_plans').select('*').order('created_at', { ascending: false }).range(offset, offset + limit - 1);
-    if (userId) query = query.eq('user_id', userId);
+    const uid = normUserId(userId);
+    if (uid) query = query.eq('user_id', uid);
     const { data, error } = await query;
     if (error) throw error;
     return (data || []).map(fromRow);
@@ -66,7 +74,8 @@ const mealPlanRepository = {
 
   async count(userId) {
     let query = getClient().from('meal_plans').select('id', { count: 'exact', head: true });
-    if (userId) query = query.eq('user_id', userId);
+    const uid = normUserId(userId);
+    if (uid) query = query.eq('user_id', uid);
     const { count, error } = await query;
     if (error) throw error;
     return count || 0;
@@ -74,7 +83,8 @@ const mealPlanRepository = {
 
   async findById(id, userId = null) {
     let query = getClient().from('meal_plans').select('*').eq('id', id);
-    if (userId) query = query.eq('user_id', userId);
+    const uid = normUserId(userId);
+    if (uid) query = query.eq('user_id', uid);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
     return fromRow(data);
@@ -82,7 +92,8 @@ const mealPlanRepository = {
 
   async deleteById(id, userId = null) {
     let query = getClient().from('meal_plans').delete().eq('id', id).select('*');
-    if (userId) query = query.eq('user_id', userId);
+    const uid = normUserId(userId);
+    if (uid) query = query.eq('user_id', uid);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
     return fromRow(data);

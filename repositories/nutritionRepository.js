@@ -1,5 +1,11 @@
 const { randomUUID } = require('crypto');
 const { getDatabaseClient } = require('../config/database');
+const userRepository = require('./userRepository');
+
+function normUserId(userId) {
+  if (userId == null) return null;
+  return userRepository.normalizeUserId(userId);
+}
 
 function getClient() {
   const client = getDatabaseClient();
@@ -54,7 +60,7 @@ function fromRow(row) {
 
 function toRow(log) {
   return {
-    user_id: log.userId || null,
+    user_id: normUserId(log.userId),
     date: log.date,
     date_string: log.dateString,
     meals: ensureIds(log.meals || []),
@@ -73,13 +79,14 @@ function toRow(log) {
 
 const nutritionRepository = {
   async getOrCreateForDate(userId, dateString) {
+    const uid = normUserId(userId);
     let query = getClient().from('nutrition_logs').select('*').eq('date_string', dateString);
-    query = userId ? query.eq('user_id', userId) : query.is('user_id', null);
+    query = uid ? query.eq('user_id', uid) : query.is('user_id', null);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
     if (data) return fromRow(data);
     const row = {
-      user_id: userId || null,
+      user_id: uid,
       date: `${dateString}T00:00:00.000Z`,
       date_string: dateString,
       meals: [],
@@ -109,34 +116,42 @@ const nutritionRepository = {
   },
 
   async findOneByDate(userId, dateString) {
+    const uid = normUserId(userId);
     let query = getClient().from('nutrition_logs').select('*').eq('date_string', dateString);
-    query = userId ? query.eq('user_id', userId) : query.is('user_id', null);
+    query = uid ? query.eq('user_id', uid) : query.is('user_id', null);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
     return fromRow(data);
   },
 
   async findByRange(userId, startDate, endDate, ascending = false) {
+    const uid = normUserId(userId);
     let query = getClient().from('nutrition_logs')
       .select('*')
       .gte('date', startDate.toISOString())
       .lte('date', endDate.toISOString())
       .order('date', { ascending });
-    query = userId ? query.eq('user_id', userId) : query.is('user_id', null);
+    query = uid ? query.eq('user_id', uid) : query.is('user_id', null);
     const { data, error } = await query;
     if (error) throw error;
     return (data || []).map(fromRow);
   },
 
   async countMeals(userId) {
-    const { data, error } = await getClient().from('nutrition_logs').select('meals').eq('user_id', userId);
+    const uid = normUserId(userId);
+    if (!uid) return 0;
+    const { data, error } = await getClient().from('nutrition_logs').select('meals').eq('user_id', uid);
     if (error) throw error;
     return (data || []).reduce((sum, row) => sum + (row.meals?.length || 0), 0);
   },
 
   async find(query = {}) {
     let q = getClient().from('nutrition_logs').select('*');
-    if (query.userId) q = q.eq('user_id', query.userId);
+    if (query.userId != null) {
+      const uid = normUserId(query.userId);
+      if (!uid) return [];
+      q = q.eq('user_id', uid);
+    }
     if (query.dateString) q = q.eq('date_string', query.dateString);
     if (query.date?.$gte) q = q.gte('date', query.date.$gte.toISOString());
     if (query.date?.$lte) q = q.lte('date', query.date.$lte.toISOString());

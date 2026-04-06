@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { apiAuth } = require('../middleware/auth');
 const { checkAndUnlockAchievements } = require('./achievements');
+const userRepository = require('../repositories/userRepository');
 
 router.post('/log', apiAuth, async (req, res) => {
   try {
@@ -30,7 +31,7 @@ router.post('/log', apiAuth, async (req, res) => {
 
     await user.save();
 
-    const newAchievements = await checkAndUnlockAchievements(user._id, 'weight_logged');
+    const newAchievements = await checkAndUnlockAchievements(userRepository.getId(user), 'weight_logged');
 
     res.json({
       success: true,

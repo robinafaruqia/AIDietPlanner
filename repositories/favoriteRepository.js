@@ -1,4 +1,9 @@
 const { getDatabaseClient } = require('../config/database');
+const userRepository = require('./userRepository');
+
+function normUserId(userId) {
+  return userRepository.normalizeUserId(userId);
+}
 
 function getClient() {
   const client = getDatabaseClient();
@@ -28,7 +33,9 @@ function fromRow(row) {
 
 const favoriteRepository = {
   async listByUser(userId, mealType = null) {
-    let query = getClient().from('favorite_meals').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    const uid = normUserId(userId);
+    if (!uid) return [];
+    let query = getClient().from('favorite_meals').select('*').eq('user_id', uid).order('created_at', { ascending: false });
     if (mealType) query = query.eq('meal_type', mealType);
     const { data, error } = await query;
     if (error) throw error;
@@ -36,20 +43,26 @@ const favoriteRepository = {
   },
 
   async findById(id, userId) {
-    const { data, error } = await getClient().from('favorite_meals').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+    const uid = normUserId(userId);
+    if (!uid) return null;
+    const { data, error } = await getClient().from('favorite_meals').select('*').eq('id', id).eq('user_id', uid).maybeSingle();
     if (error) throw error;
     return fromRow(data);
   },
 
   async findDuplicate(userId, normalizedName) {
-    const { data, error } = await getClient().from('favorite_meals').select('*').eq('user_id', userId).ilike('name', normalizedName).maybeSingle();
+    const uid = normUserId(userId);
+    if (!uid) return null;
+    const { data, error } = await getClient().from('favorite_meals').select('*').eq('user_id', uid).ilike('name', normalizedName).maybeSingle();
     if (error) throw error;
     return fromRow(data);
   },
 
   async create(payload) {
+    const uid = normUserId(payload.userId);
+    if (!uid) throw new Error('Invalid user id');
     const { data, error } = await getClient().from('favorite_meals').insert({
-      user_id: payload.userId,
+      user_id: uid,
       name: payload.name,
       meal_type: payload.mealType,
       calories: payload.calories || 0,
@@ -66,6 +79,8 @@ const favoriteRepository = {
   },
 
   async update(id, userId, patch) {
+    const uid = normUserId(userId);
+    if (!uid) return null;
     const payload = {};
     if (patch.name !== undefined) payload.name = patch.name;
     if (patch.mealType !== undefined) payload.meal_type = patch.mealType;
@@ -77,13 +92,15 @@ const favoriteRepository = {
     if (patch.ingredients !== undefined) payload.ingredients = patch.ingredients;
     if (patch.servingSize !== undefined) payload.serving_size = patch.servingSize;
     if (patch.notes !== undefined) payload.notes = patch.notes;
-    const { data, error } = await getClient().from('favorite_meals').update(payload).eq('id', id).eq('user_id', userId).select('*').maybeSingle();
+    const { data, error } = await getClient().from('favorite_meals').update(payload).eq('id', id).eq('user_id', uid).select('*').maybeSingle();
     if (error) throw error;
     return fromRow(data);
   },
 
   async remove(id, userId) {
-    const { data, error } = await getClient().from('favorite_meals').delete().eq('id', id).eq('user_id', userId).select('*').maybeSingle();
+    const uid = normUserId(userId);
+    if (!uid) return null;
+    const { data, error } = await getClient().from('favorite_meals').delete().eq('id', id).eq('user_id', uid).select('*').maybeSingle();
     if (error) throw error;
     return fromRow(data);
   }

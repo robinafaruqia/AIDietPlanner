@@ -7,6 +7,25 @@ function getClient() {
   return client;
 }
 
+/** UUID string for Postgres; never returns "[object Object]" */
+function normalizeUserId(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const s = String(value).trim();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s) ? s : null;
+  }
+  if (typeof value === 'object') {
+    if (typeof value.toHexString === 'function') {
+      const hex = value.toHexString();
+      return normalizeUserId(hex);
+    }
+    if (value.id != null) return normalizeUserId(value.id);
+    if (value._id != null) return normalizeUserId(value._id);
+    return null;
+  }
+  return null;
+}
+
 function computeWeightProgress(user) {
   if (!user.startWeight || !user.currentWeight) return null;
   const lost = user.startWeight - user.currentWeight;
@@ -139,8 +158,12 @@ function setByPath(target, path, value) {
 }
 
 const userRepository = {
+  normalizeUserId,
+
   async findById(id) {
-    const { data, error } = await getClient().from('users').select('*').eq('id', id).maybeSingle();
+    const uuid = normalizeUserId(id);
+    if (!uuid) return null;
+    const { data, error } = await getClient().from('users').select('*').eq('id', uuid).maybeSingle();
     if (error) throw error;
     return mapFromRow(data);
   },
@@ -166,8 +189,9 @@ const userRepository = {
     const payload = mapToRow(user);
     let data;
     let error;
-    if (user.id) {
-      ({ data, error } = await getClient().from('users').update(payload).eq('id', user.id).select('*').single());
+    const existingId = normalizeUserId(user.id ?? user._id);
+    if (existingId) {
+      ({ data, error } = await getClient().from('users').update(payload).eq('id', existingId).select('*').single());
     } else {
       ({ data, error } = await getClient().from('users').insert(payload).select('*').single());
     }
@@ -177,7 +201,9 @@ const userRepository = {
   },
 
   async updateById(id, patch) {
-    const { data, error } = await getClient().from('users').update(patch).eq('id', id).select('*').single();
+    const uuid = normalizeUserId(id);
+    if (!uuid) throw new Error('Invalid user id');
+    const { data, error } = await getClient().from('users').update(patch).eq('id', uuid).select('*').single();
     if (error) throw error;
     return mapFromRow(data);
   },
@@ -209,7 +235,7 @@ const userRepository = {
   },
 
   getId(user) {
-    return user?._id || user?.id || null;
+    return normalizeUserId(user?._id ?? user?.id ?? user);
   }
 };
 

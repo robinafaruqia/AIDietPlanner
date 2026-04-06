@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, apiAuth } = require('../middleware/auth');
 const User = require('../models/User');
+const userRepository = require('../repositories/userRepository');
 
 // Google Fitness API configuration
 const GOOGLE_FIT_SCOPES = [
@@ -364,7 +365,7 @@ async function refreshGoogleFitToken(user) {
     const tokens = await response.json();
     
     if (tokens.access_token) {
-        await User.findByIdAndUpdate(user._id, {
+        await User.findByIdAndUpdate(userRepository.getId(user), {
             'biometricConnections.googleFit.accessToken': tokens.access_token,
             'biometricConnections.googleFit.tokenExpiry': new Date(Date.now() + tokens.expires_in * 1000)
         });

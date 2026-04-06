@@ -2,6 +2,7 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const userRepository = require('../repositories/userRepository');
+const { isProduction } = require('./environment');
 
 function normalizePassportError(error) {
   if (!error) return null;
@@ -48,9 +49,9 @@ function initializePassport() {
 
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-     const isProduction = process.env.NODE_ENV === 'production';
-  const googleCallbackUrl = isProduction
-    ? process.env.GOOGLE_CALLBACK_URL
+  const configuredCallbackUrl = (process.env.GOOGLE_CALLBACK_URL || '').replace(/\/+$/, '');
+  const googleCallbackUrl = (isProduction && configuredCallbackUrl)
+    ? configuredCallbackUrl
     : `http://localhost:${process.env.PORT || 3000}/api/auth/google/callback`;
 
   if (googleClientId && googleClientSecret) {
@@ -105,6 +106,9 @@ function initializePassport() {
         }
       }
     ));
+    if (!configuredCallbackUrl && isProduction) {
+      console.warn('⚠️ GOOGLE_CALLBACK_URL not set in production. Using fallback callback URL:', googleCallbackUrl);
+    }
     console.log('✅ Google OAuth configured');
   } else {
     console.log('⚠️ Google OAuth not configured (missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET)');

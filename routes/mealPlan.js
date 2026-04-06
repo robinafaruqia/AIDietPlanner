@@ -36,7 +36,7 @@ function normalizeHealthConditions(healthConditions) {
 }
 
 function getUserId(req) {
-  return req.user ? req.user.id : null;
+  return req.user ? userRepository.getId(req.user) : null;
 }
 
 async function saveMealPlanToDatabase(weight, height, conditions, mealPlanData, userId = null) {
