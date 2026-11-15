@@ -28,8 +28,11 @@ router.get('/status', apiAuth, async (req, res) => {
                 lastSync: user.biometricConnections?.googleFit?.lastSync || null
             },
             appleHealth: {
-                connected: false, // Apple Health requires native app
-                message: 'Apple Health integration requires a native iOS app'
+                connected: !!(user.biometricConnections?.appleHealth?.connected),
+                lastSync: user.biometricConnections?.appleHealth?.lastSync || null,
+                tokenHint: user.biometricConnections?.appleHealth?.tokenHint || null,
+                deviceInfo: user.biometricConnections?.appleHealth?.deviceInfo || null,
+                preferences: user.biometricConnections?.appleHealth?.preferences || null
             },
             fitbit: {
                 connected: !!(user.biometricConnections?.fitbit?.connected),
@@ -298,7 +301,7 @@ router.get('/data', apiAuth, async (req, res) => {
         res.json({
             success: true,
             data: user?.biometricData || null,
-            lastSync: user?.biometricConnections?.googleFit?.lastSync || null
+            lastSync: user?.biometricData?.lastSync || user?.biometricConnections?.googleFit?.lastSync || user?.biometricConnections?.appleHealth?.lastSync || null
         });
     } catch (error) {
         console.error('Get biometric data error:', error);

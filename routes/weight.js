@@ -3,6 +3,8 @@ const router = express.Router();
 const { apiAuth } = require('../middleware/auth');
 const { checkAndUnlockAchievements } = require('./achievements');
 const userRepository = require('../repositories/userRepository');
+const { bumpGoalsVersion } = require('../services/appleHealthService');
+const User = require('../models/User');
 
 router.post('/log', apiAuth, async (req, res) => {
   try {
@@ -140,6 +142,15 @@ router.put('/goal', apiAuth, async (req, res) => {
     }
 
     await user.save();
+
+    if (user.biometricConnections?.appleHealth?.connected) {
+      const biometricConnections = bumpGoalsVersion(user);
+      biometricConnections.appleHealth = {
+        ...user.biometricConnections.appleHealth,
+        connected: true
+      };
+      await User.findByIdAndUpdate(userRepository.getId(user), { biometricConnections });
+    }
 
     res.json({
       success: true,

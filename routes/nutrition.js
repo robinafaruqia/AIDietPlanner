@@ -4,6 +4,8 @@ const NutritionLog = require('../models/NutritionLog');
 const userRepository = require('../repositories/userRepository');
 const { optionalAuth } = require('../middleware/auth');
 const { checkAndUnlockAchievements } = require('./achievements');
+const { bumpGoalsVersion } = require('../services/appleHealthService');
+const User = require('../models/User');
 const { isDatabaseConnected } = require('../config/database');
 const https = require('https');
 const http = require('http');
@@ -226,6 +228,12 @@ router.put('/goals', async (req, res) => {
     }
 
     await log.save();
+
+    if (userId && req.user?.biometricConnections?.appleHealth?.connected) {
+      const biometricConnections = bumpGoalsVersion(req.user);
+      await User.findByIdAndUpdate(userId, { biometricConnections });
+    }
+
     res.json({ success: true, log });
   } catch (error) {
     console.error('Error updating goals:', error);

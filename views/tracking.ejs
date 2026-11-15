@@ -4016,14 +4016,20 @@
             
             try {
                 const statusResponse = await $.get('/api/biometric/status');
-                if (statusResponse.success && statusResponse.connections.googleFit.connected) {
+                if (statusResponse.success && statusResponse.connections.googleFit?.connected) {
                     const syncResponse = await $.post('/api/biometric/sync/google-fit');
                     if (syncResponse.success) {
                         updateBiometricUI(syncResponse.data);
-                        showToast('success', 'Synced', 'Biometric data updated');
+                        showToast('success', 'Synced', 'Biometric data updated from Google Fit');
                     }
+                } else if (statusResponse.success && statusResponse.connections.appleHealth?.connected) {
+                    await loadBiometricData();
+                    const last = statusResponse.connections.appleHealth.lastSync;
+                    showToast('success', 'Apple Health', last
+                        ? 'Showing latest data from your iPhone sync'
+                        : 'Connected — open the iOS Health Sync app on your iPhone to upload data');
                 } else {
-                    showToast('info', 'Not Connected', 'Connect Google Fit in your profile settings');
+                    showToast('info', 'Not Connected', 'Connect Google Fit or Apple Health in Profile → Connected Devices');
                 }
             } catch (error) {
                 console.error('Sync error:', error);

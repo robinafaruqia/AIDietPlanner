@@ -85,6 +85,7 @@ const achievementsRoutes = require('./routes/achievements');
 const fastingRoutes = require('./routes/fasting');
 const foodRecognitionRoutes = require('./routes/food-recognition');
 const biometricRoutes = require('./routes/biometric');
+const appleHealthRoutes = require('./routes/apple-health');
 const keepAliveRoutes = require('./routes/keep-alive');
 const { getAllConditions } = require('./config/healthConditions');
 
@@ -99,6 +100,7 @@ app.use('/api/achievements', achievementsRoutes);
 app.use('/api/fasting', fastingRoutes);
 app.use('/api/food-recognition', foodRecognitionRoutes);
 app.use('/api/biometric', biometricRoutes);
+app.use('/api/apple-health', appleHealthRoutes);
 app.use('/api/keep-alive', keepAliveRoutes);
 
 app.get('/api/health-conditions', (req, res) => {
