@@ -575,18 +575,25 @@
                     </div>
                 </div>
 
-                <!-- Apple Health (Info only) -->
-                <div class="d-flex align-items-center justify-content-between p-3 rounded mb-2" style="background: rgba(0, 0, 0, 0.05);">
+                <!-- Apple Health -->
+                <div class="d-flex align-items-center justify-content-between p-3 rounded mb-2" style="background: rgba(255, 45, 85, 0.08);">
                     <div class="d-flex align-items-center gap-3">
                         <div class="device-icon" style="width: 48px; height: 48px; border-radius: 12px; background: white; display: flex; align-items: center; justify-content: center;">
                             <i class="bi bi-heart-fill text-danger fs-4"></i>
                         </div>
                         <div>
                             <div class="fw-bold">Apple Health</div>
-                            <small class="text-muted">Requires iOS app</small>
+                            <small class="text-muted" id="appleHealthStatus">Not connected</small>
                         </div>
                     </div>
-                    <span class="badge bg-secondary">Coming Soon</span>
+                    <div id="appleHealthActions">
+                        <button type="button" class="btn btn-sm btn-primary" id="btnConnectAppleHealth">
+                            <i class="bi bi-link-45deg"></i> Connect
+                        </button>
+                    </div>
+                </div>
+                <div class="small text-muted mb-2 px-1" id="appleHealthHint" style="display: none;">
+                    <i class="bi bi-phone"></i> Pair the companion iOS app with your sync token. Goals from this app are pushed to Apple Health; steps, weight, and activity sync back automatically.
                 </div>
 
                 <!-- Fitbit (Placeholder) -->
@@ -606,6 +613,34 @@
                 <!-- Last Sync Info -->
                 <div class="text-center mt-3 small text-muted" id="lastSyncInfo" style="display: none;">
                     <i class="bi bi-clock-history"></i> Last synced: <span id="lastSyncTime">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apple Health Token Modal -->
+        <div class="modal fade" id="appleHealthTokenModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="border-radius: 15px;">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-heart-fill text-danger"></i> Apple Health Sync Token</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-muted">Copy this token into the <strong>AIDietPlanner Health Sync</strong> iOS app (see <code>mobile/ios/AIDietPlannerHealthSync</code>). It is shown only once.</p>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control font-monospace" id="appleHealthSyncToken" readonly>
+                            <button class="btn btn-outline-secondary" type="button" id="btnCopyAppleToken"><i class="bi bi-clipboard"></i></button>
+                        </div>
+                        <label class="form-label small">Server URL (for self-hosted)</label>
+                        <input type="text" class="form-control form-control-sm mb-2" id="appleHealthServerUrl" placeholder="https://your-app.example.com">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="appleWriteGoals" checked>
+                            <label class="form-check-label small" for="appleWriteGoals">Write nutrition &amp; weight goals to Apple Health</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -991,6 +1026,28 @@
                 });
             }
 
+            // Apple Health
+            if (connections.appleHealth?.connected) {
+                connectedCount++;
+                const lastSync = connections.appleHealth.lastSync
+                    ? new Date(connections.appleHealth.lastSync).toLocaleString()
+                    : 'Waiting for first sync from iPhone';
+                $('#appleHealthStatus').html(`Connected${connections.appleHealth.tokenHint ? ' (' + connections.appleHealth.tokenHint + ')' : ''} · ${lastSync}`).removeClass('text-muted').addClass('text-success');
+                $('#appleHealthHint').show();
+                $('#appleHealthActions').html(`
+                    <button class="btn btn-sm btn-outline-primary me-2" id="btnRegenerateAppleToken" title="Create new token if you lost the old one">
+                        <i class="bi bi-key"></i> New Token
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" id="btnDisconnectAppleHealth">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                `);
+                $('#btnRegenerateAppleToken').click(() => connectAppleHealth(true));
+                $('#btnDisconnectAppleHealth').click(disconnectAppleHealth);
+            } else {
+                $('#btnConnectAppleHealth').off('click').click(() => connectAppleHealth(false));
+            }
+
             // Fitbit (future)
             if (connections.fitbit?.connected) {
                 connectedCount++;
@@ -998,6 +1055,46 @@
 
             $('#connectionCount').text(connectedCount > 0 ? `${connectedCount} connected` : 'Not connected');
         }
+
+        async function connectAppleHealth(regenerate) {
+            if (regenerate && !confirm('This invalidates your previous iOS sync token. Continue?')) return;
+            try {
+                const response = await $.ajax({
+                    url: '/api/apple-health/connect',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ regenerate: !!regenerate })
+                });
+                if (response.success && response.syncToken) {
+                    $('#appleHealthSyncToken').val(response.syncToken);
+                    $('#appleHealthServerUrl').val(window.location.origin);
+                    new bootstrap.Modal(document.getElementById('appleHealthTokenModal')).show();
+                    loadBiometricStatus();
+                } else if (response.alreadyConnected) {
+                    alert('Already connected. Use "New Token" to generate a fresh token for your iPhone.');
+                }
+            } catch (error) {
+                alert('Failed to connect Apple Health: ' + (error.responseJSON?.error || error.message));
+            }
+        }
+
+        async function disconnectAppleHealth() {
+            if (!confirm('Disconnect Apple Health? Synced data stays on your account.')) return;
+            try {
+                await $.post('/api/apple-health/disconnect');
+                location.reload();
+            } catch (error) {
+                alert('Failed to disconnect');
+            }
+        }
+
+        $('#btnCopyAppleToken').click(function() {
+            const input = document.getElementById('appleHealthSyncToken');
+            input.select();
+            document.execCommand('copy');
+            $(this).html('<i class="bi bi-check-lg"></i>');
+            setTimeout(() => $(this).html('<i class="bi bi-clipboard"></i>'), 1500);
+        });
 
         $(document).ready(function() {
             loadAchievements();

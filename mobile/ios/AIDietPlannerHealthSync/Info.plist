@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSHealthShareUsageDescription</key>
+    <string>AI Diet Planner reads steps, heart rate, weight, sleep, and nutrition from Apple Health to show your progress and goals in one place.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>AI Diet Planner writes your calorie and macro goals to Apple Health so you can track them in the Health app.</string>
+</dict>
+</plist>
